@@ -20,13 +20,16 @@ func Update(w http.ResponseWriter, r *http.Request){
 	if len(params) != PARAMS_AMOUNT{
 		http.Error(w, fmt.Sprintf("number of request parameters does not match expected, "+ 
 		"expected: %d, received: %d", PARAMS_AMOUNT, len(params)), http.StatusBadRequest)
+		return
 	} else if params[1] == ""{
 		http.Error(w, "Metric name not found in request", http.StatusNotFound)
+		return
 	}
 	//извлекаем хранилку из контекста
 	storage, ok := r.Context().Value(STORAGE_KEY).(*storage.MemStorage)
 	if !ok{
 		http.Error(w, "No storage found in context", http.StatusInternalServerError)
+		return
 	}
 	//сохраняем данные
 	mName := params[1]
@@ -35,7 +38,13 @@ func Update(w http.ResponseWriter, r *http.Request){
 	err := storage.Push(mName, mValue, mType)
 	if err != nil{
 		http.Error(w, "Fail while push", http.StatusInternalServerError)
+		return
 	}
+	w.Header().Set("Сontent-Length", fmt.Sprint(len("Success")))
+	w.Header().Set("Content-Type", "text/plain; charset=utf-8")
 	w.WriteHeader(http.StatusOK)
-	w.Write([]byte("Success"))
+	_, err = w.Write([]byte("Success"))
+	if err !=nil{
+		http.Error(w, "Fail while write", http.StatusInternalServerError)
+	}
 }
