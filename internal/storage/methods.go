@@ -3,16 +3,16 @@ package storage
 import "errors"
 
 func New() *MemStorage{
-	var store MemStorage
+	var storage MemStorage
 
-	store.ItemsGauge = make(map[string]string)
-	store.ItemsCounter = make(map[string][]string)
+	storage.ItemsGauge = make(map[string]string)
+	storage.ItemsCounter = make(map[string][]string)
 
-	return &store
+	return &storage
 }
 
-func (ms *MemStorage) Push(name, value, type_metric string) error{
-	switch type_metric{
+func (ms *MemStorage) Push(name, value, typeMetric string) error{
+	switch typeMetric{
 	case "gauge":
 		ms.ItemsGauge[name] = value
 		return nil
