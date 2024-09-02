@@ -12,6 +12,7 @@ func Middleware(next http.Handler, storage *storage.MemStorage)http.Handler{
 		//проверяем запрос
 		if r.Method != http.MethodPost{
 			http.Error(w, "Just POST allow", http.StatusBadRequest)
+			return
 		}
 		//добавляем контекст в реквест
 		ctx := context.WithValue(r.Context(), STORAGE_KEY, storage)
