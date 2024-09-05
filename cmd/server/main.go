@@ -6,7 +6,7 @@ import (
 	"net/http"
 
 	"github.com/Grifonhard/Practicum-metrics/internal/storage"
-	"github.com/Grifonhard/Practicum-metrics/internal/web"
+	web "github.com/Grifonhard/Practicum-metrics/internal/web_server"
 )
 
 func main() {
