@@ -2,7 +2,7 @@ package storage
 
 import "errors"
 
-func New() *MemStorage{
+func New() *MemStorage {
 	var storage MemStorage
 
 	storage.ItemsGauge = make(map[string]string)
@@ -11,8 +11,8 @@ func New() *MemStorage{
 	return &storage
 }
 
-func (ms *MemStorage) Push(name, value, typeMetric string) error{
-	switch typeMetric{
+func (ms *MemStorage) Push(name, value, typeMetric string) error {
+	switch typeMetric {
 	case "gauge":
 		ms.ItemsGauge[name] = value
 		return nil
@@ -24,6 +24,6 @@ func (ms *MemStorage) Push(name, value, typeMetric string) error{
 	}
 }
 
-func (ms *MemStorage) Pop(name string) ([]string, error){
+func (ms *MemStorage) Pop(name string) ([]string, error) {
 	return nil, errors.New("Not implemented")
 }

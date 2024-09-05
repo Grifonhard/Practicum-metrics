@@ -1,21 +1,22 @@
 package metgen
 
 import (
+	"fmt"
 	"math/rand"
 	"runtime"
 )
 
-type MetricsGenerator interface{
+type MetricsGenerator interface {
 	Renew() error
-	Collect() (map[string]float64, map[string]int64, error)	
+	Collect() (gauge map[string]string, counter map[string]string, err error)
 }
 
-type MetGen struct{
-	metricsGauge map[string]float64 //метрики float64
-	metricsCounter map[string]int64	//метрики int64	
+type MetGen struct {
+	metricsGauge   map[string]float64 //метрики float64
+	metricsCounter map[string]int64   //метрики int64
 }
 
-func New() *MetGen{
+func New() *MetGen {
 	var mg MetGen
 	mg.metricsGauge = make(map[string]float64)
 	mg.metricsCounter = make(map[string]int64)
@@ -60,6 +61,14 @@ func (mg *MetGen) Renew() error {
 	return nil
 }
 
-func (mg *MetGen) Collect() (map[string]float64, map[string]int64, error){
-	return mg.metricsGauge, mg.metricsCounter, nil
+func (mg *MetGen) Collect() (map[string]string, map[string]string, error) {
+	gg := make(map[string]string)
+	cntr := make(map[string]string)
+	for k, v := range mg.metricsGauge {
+		gg[k] = fmt.Sprint(v)
+	}
+	for k, v := range mg.metricsCounter {
+		cntr[k] = fmt.Sprint(v)
+	}
+	return gg, cntr, nil
 }
