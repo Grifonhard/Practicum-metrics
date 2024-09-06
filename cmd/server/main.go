@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"context"
 
 	"github.com/Grifonhard/Practicum-metrics/internal/storage"
 	web "github.com/Grifonhard/Practicum-metrics/internal/web_server"
@@ -11,9 +12,23 @@ import (
 
 func main() {
 	mux := http.NewServeMux()
-	storage := storage.New()
+	stor := storage.New()
 
-	mux.Handle("/update/", web.Middleware(http.HandlerFunc(web.Update), storage))
+	mux.Handle("/update/{type}/{name}/{value}", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request){
+			//проверяем запрос
+			if r.Method != http.MethodPost {
+				http.Error(w, "Just POST allow", http.StatusBadRequest)
+				return
+			}
+
+			//добавляем контекст в реквест
+			ctx := context.WithValue(r.Context(), web.STORAGE_KEY, stor)
+			ctx = context.WithValue(ctx, web.TYPE_KEY, r.PathValue("type"))
+			ctx = context.WithValue(ctx, web.NAME_KEY, r.PathValue("name"))
+			ctx = context.WithValue(ctx, web.VALUE_KEY, r.PathValue("value"))
+
+			web.Update(w, r.WithContext(ctx))	
+		}))
 
 	fmt.Printf("Server start localhost:8080")
 	log.Fatal(http.ListenAndServe(":8080", mux))
