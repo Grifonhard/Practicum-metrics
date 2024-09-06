@@ -1,10 +1,10 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"log"
 	"net/http"
-	"context"
 
 	"github.com/Grifonhard/Practicum-metrics/internal/storage"
 	web "github.com/Grifonhard/Practicum-metrics/internal/web_server"
@@ -15,12 +15,6 @@ func main() {
 	stor := storage.New()
 
 	mux.Handle("/update/{type}/{name}/{value}", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request){
-			//проверяем запрос
-			if r.Method != http.MethodPost {
-				http.Error(w, "Just POST allow", http.StatusBadRequest)
-				return
-			}
-
 			//добавляем контекст в реквест
 			ctx := context.WithValue(r.Context(), web.STORAGE_KEY, stor)
 			ctx = context.WithValue(ctx, web.TYPE_KEY, r.PathValue("type"))

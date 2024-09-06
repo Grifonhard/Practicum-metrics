@@ -13,10 +13,10 @@ func New() *MemStorage {
 
 func (ms *MemStorage) Push(name, value, typeMetric string) error {
 	switch typeMetric {
-	case "gauge":
+	case TYPE1:
 		ms.ItemsGauge[name] = value
 		return nil
-	case "counter":
+	case TYPE2:
 		ms.ItemsCounter[name] = append(ms.ItemsCounter[name], value)
 		return nil
 	default:

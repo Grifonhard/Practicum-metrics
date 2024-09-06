@@ -16,6 +16,11 @@ const (
 )
 
 func Update(w http.ResponseWriter, r *http.Request) {
+	//проверяем запрос
+	if r.Method != http.MethodPost {
+		http.Error(w, "Just POST allow", http.StatusBadRequest)
+		return
+	}
 	//извлекаем данные из контекста
 	stor, ok := r.Context().Value(STORAGE_KEY).(*storage.MemStorage)
 	if !ok {
@@ -41,7 +46,7 @@ func Update(w http.ResponseWriter, r *http.Request) {
 	//сохраняем данные
 	err := stor.Push(mName, mValue, mType)
 	if err != nil {
-		http.Error(w, "Fail while push", http.StatusInternalServerError)
+		http.Error(w, fmt.Sprintf("Fail while push error: %s", err.Error()), http.StatusInternalServerError)
 		return
 	}
 	w.Header().Set("Сontent-Length", fmt.Sprint(len("Success")))
