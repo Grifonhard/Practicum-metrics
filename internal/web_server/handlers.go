@@ -41,7 +41,7 @@ func Update(w http.ResponseWriter, r *http.Request) {
 	if !ok {
 		http.Error(w, "Value not found in context", http.StatusInternalServerError)
 		return
-	}
+	}	
 
 	//сохраняем данные
 	err := stor.Push(mName, mValue, mType)
