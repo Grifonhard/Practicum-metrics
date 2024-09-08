@@ -33,7 +33,7 @@ func (ms *MemStorage) Push(metric *Metric) error {
 	}
 }
 
-func (ms *MemStorage) Pop(metric *Metric) (string, error) {
+func (ms *MemStorage) Get(metric *Metric) (string, error) {
 	if metric == nil{
 		return "", errors.New("Metric is empty")
 	}

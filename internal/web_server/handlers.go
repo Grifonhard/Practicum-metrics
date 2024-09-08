@@ -76,7 +76,7 @@ func Pop (stor *storage.MemStorage) gin.HandlerFunc{
 		}
 
 		//получаем данные
-		value, err := stor.Pop(item)
+		value, err := stor.Get(item)
 		if err != nil && err.Error() == "Metric is empty" {
 			c.String(http.StatusInternalServerError, err.Error())
 			c.Abort()
