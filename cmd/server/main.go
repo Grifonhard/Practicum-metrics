@@ -11,7 +11,6 @@ import (
 )
 
 func main() {
-	mux := http.NewServeMux()
 	stor := storage.New()
 
 	r := gin.Default()
@@ -19,5 +18,5 @@ func main() {
 	r.POST("/update/:type/:name/:value", web.Middleware(), web.Update(stor))
 
 	fmt.Printf("Server start localhost:8080")
-	log.Fatal(http.ListenAndServe(":8080", mux))
+	log.Fatal(http.ListenAndServe(":8080", r))
 }
