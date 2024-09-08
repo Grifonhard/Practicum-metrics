@@ -1,19 +1,39 @@
 package main
 
 import (
+	"flag"
 	"fmt"
 	"log"
-	"flag"
+	"strings"
 
 	"github.com/Grifonhard/Practicum-metrics/internal/storage"
 	web "github.com/Grifonhard/Practicum-metrics/internal/web_server"
+	"github.com/caarlos0/env/v10"
 	"github.com/gin-gonic/gin"
 )
 
+const (
+	DEFAULT_PORT = "8080"
+)
+
+type CFG struct{
+	Addr string `env:""ADDRESS`
+}
+
 func main() {
-	port := flag.String("a", "8080", "server port")
+	port := flag.String("a", DEFAULT_PORT, "server port")
 
 	flag.Parse()
+
+	var cfg CFG
+	err := env.Parse(&cfg)
+	if err != nil{
+		log.Fatal(err)
+	}
+
+	if cfg.Addr != ""{
+		*port, _ = strings.CutPrefix(cfg.Addr, "localhost:")
+	}
 
 	stor := storage.New()
 
