@@ -20,5 +20,5 @@ func main() {
 	r.GET("/", web.List(stor))
 
 	fmt.Printf("Server start localhost:8080")
-	log.Fatal(r.Run(":8079"))
+	log.Fatal(r.Run(":8080"))
 }
