@@ -15,6 +15,9 @@ func New() *MemStorage {
 }
 
 func (ms *MemStorage) Push(metric *Metric) error {
+	if metric == nil{
+		return errors.New("Metric is empty")
+	}
 	switch metric.Type {
 	case TYPE1:
 		ms.ItemsGauge[metric.Name] = metric.Value
