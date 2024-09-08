@@ -1,82 +1,77 @@
 package webserver
 
 import (
-	"context"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"testing"
 
 	"github.com/Grifonhard/Practicum-metrics/internal/storage"
+	"github.com/gin-gonic/gin"
 	"github.com/stretchr/testify/assert"
 )
 
-func TestMain(t *testing.T){
+func TestPost(t *testing.T){
 	//подготовка
 	stor := storage.New()
+
+	updatePath := "/update"
 	
 	name := "name"
-	value := "value"
+	value := 1.14
 	itemType1 := storage.TYPE1
 	itemType2 := storage.TYPE2
 
-	rSuccess1 := httptest.NewRequest(http.MethodPost, "/", nil)
-	ctx1 := context.WithValue(rSuccess1.Context(), STORAGE_KEY, stor)
-	ctx1 = context.WithValue(ctx1, TYPE_KEY, itemType1)
-	ctx1 = context.WithValue(ctx1, NAME_KEY, name)
-	ctx1 = context.WithValue(ctx1, VALUE_KEY, value)
-	rSuccess1 = rSuccess1.WithContext(ctx1)
+	item1 := storage.Metric{
+		Type: itemType1,
+		Name: name,
+		Value: value,
+	}
 
-	rSuccess2 := httptest.NewRequest(http.MethodPost, "/", nil)
-	ctx2 := context.WithValue(rSuccess2.Context(), STORAGE_KEY, stor)
-	ctx2 = context.WithValue(ctx2, TYPE_KEY, itemType2)
-	ctx2 = context.WithValue(ctx2, NAME_KEY, name)
-	ctx2 = context.WithValue(ctx2, VALUE_KEY, value)
-	rSuccess2 = rSuccess2.WithContext(ctx2)
+	item2 := storage.Metric{
+		Type: itemType2,
+		Name: name,
+		Value: value,
+	}
 
-	rWrongMethod := httptest.NewRequest(http.MethodGet, "/", nil)
-	ctxwm := context.WithValue(rWrongMethod.Context(), STORAGE_KEY, stor)
-	ctxwm = context.WithValue(ctxwm, TYPE_KEY, itemType2)
-	ctxwm = context.WithValue(ctxwm, NAME_KEY, name)
-	ctxwm = context.WithValue(ctxwm, VALUE_KEY, value)
-	rWrongMethod = rWrongMethod.WithContext(ctxwm)
+	urlSuccess1 :=  fmt.Sprintf("%s/%s/%s/%.2f", updatePath, item1.Type, item1.Name, item1.Value)
+	urlSuccess2 :=  fmt.Sprintf("%s/%s/%s/%.2f", updatePath, item2.Type, item2.Name, item2.Value)
+	urlWrongType := fmt.Sprintf("%s/%s/%s/%.2f", updatePath, "wrong", item1.Name, item1.Value)
+	urlWrongValue := fmt.Sprintf("%s/%s/%s/%s", updatePath, item1.Type, item1.Name, "wrong")
 
-	rWithoutStor := httptest.NewRequest(http.MethodPost, "/", nil)
-	ctxws := context.WithValue(rWithoutStor.Context(), TYPE_KEY, itemType2)
-	ctxws = context.WithValue(ctxws, NAME_KEY, name)
-	ctxws = context.WithValue(ctxws, VALUE_KEY, value)
-	rWithoutStor = rWithoutStor.WithContext(ctxws)
+	methodSuccess := http.MethodPost
+	methodWrong := http.MethodGet
 
-	rWrongType := httptest.NewRequest(http.MethodPost, "/", nil)
-	ctxwt := context.WithValue(rWrongType.Context(), STORAGE_KEY, stor)
-	ctxwt = context.WithValue(ctxwt, TYPE_KEY, rSuccess1.PathValue("wrong"))
-	ctxwt = context.WithValue(ctxwt, NAME_KEY, rSuccess1.PathValue(name))
-	ctxwt = context.WithValue(ctxwt, VALUE_KEY, rSuccess1.PathValue(value))
-	rWrongType = rWrongType.WithContext(ctxwt)
+	router := gin.Default()
 
+	router.POST("/update/:type/:name/:value", Middleware(), Update(stor))
 
 	tests := []struct{
-		req *http.Request
+		url string
+		method string
 		waitErr bool
 		message string
 	}{
-		{rSuccess1, false, "type 1 success"},
-		{rSuccess2, false, "type 2 success"},
-		{rWrongMethod, true, "wrong method"},
-		{rWithoutStor, true, "without store in context"},
-		{rWrongType, true, "wrong metric type"},
+		{urlSuccess1, methodSuccess, false, "type 1 success"},
+		{urlSuccess2, methodSuccess, false, "type 2 success"},
+		{urlWrongType, methodSuccess, true, "wrong type"},
+		{urlWrongValue, methodSuccess, true, "wrong value"},
+		{urlSuccess1, methodWrong, true, "wrong method"},
 	}
 
-	
+	for _, tt := range tests {
+		t.Run(tt.message, func(t *testing.T) {
+			r := httptest.NewRequest(tt.method, tt.url, nil)
 
-	for _, tt := range tests{
-		w := httptest.NewRecorder()
+			w := httptest.NewRecorder()
 
-		Update(w, tt.req)
+			router.ServeHTTP(w, r)
 
-		if tt.waitErr{
-			assert.NotEqual(t, http.StatusOK, w.Result().StatusCode, tt.message)
-		} else {
-			assert.Equal(t, http.StatusOK, w.Result().StatusCode, tt.message)
-		}
+			if tt.waitErr {
+				assert.NotEqual(t, http.StatusOK, w.Code, tt.message)
+			} else {
+				assert.Equal(t, http.StatusOK, w.Code, tt.message)
+			}
+		})
 	}
 }

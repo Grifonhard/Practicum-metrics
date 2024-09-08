@@ -1,0 +1,13 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>{{ .Title }}</title>
+</head>
+<body>
+    <ul>
+        {{ range .Items }}
+            <li>{{ . }}</li>
+        {{ end }}
+    </ul>
+</body>
+</html>
