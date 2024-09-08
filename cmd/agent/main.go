@@ -1,6 +1,7 @@
 package main
 
 import (
+	"flag"
 	"fmt"
 	"net/http"
 	"time"
@@ -11,15 +12,18 @@ import (
 const (
 	ADDR           = "localhost"
 	PORT           = "8080"
-	POLLINTERVAL   = 2
-	REPORTINTERVAL = 10
 )
 
 func main() {
+	reportInterVal := flag.Int("r", 10, "секунд частота отправки метрик")
+	pollInterval := flag.Int("p", 2, "секунд частота опроса метрик")
+
+	flag.Parse()
+
 	generator := metgen.New()
 
-	timerPoll := time.NewTicker(time.Duration(POLLINTERVAL) * time.Second)
-	timerReport := time.NewTicker(time.Duration(REPORTINTERVAL) * time.Second)
+	timerPoll := time.NewTicker(time.Duration(*pollInterval) * time.Second)
+	timerReport := time.NewTicker(time.Duration(*reportInterVal) * time.Second)
 
 	var err error
 
