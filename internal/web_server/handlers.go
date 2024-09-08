@@ -10,9 +10,7 @@ import (
 const (
 	PARAMS_AMOUNT = 3
 	STORAGE_KEY   = "storage"
-	TYPE_KEY = "type"
-	NAME_KEY = "name"
-	VALUE_KEY = "value"
+	METRIC_KEY = "metric"
 )
 
 func Update(w http.ResponseWriter, r *http.Request) {
@@ -27,24 +25,14 @@ func Update(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Storage not found in context", http.StatusInternalServerError)
 		return
 	}
-	mType, ok := r.Context().Value(TYPE_KEY).(string)
+	item, ok := r.Context().Value(METRIC_KEY).(*storage.Metric)
 	if !ok {
-		http.Error(w, "Type not found in context", http.StatusInternalServerError)
+		http.Error(w, "Metric not found in context", http.StatusInternalServerError)
 		return
 	}
-	mName, ok := r.Context().Value(NAME_KEY).(string)
-	if !ok {
-		http.Error(w, "Name not found in context", http.StatusInternalServerError)
-		return
-	}
-	mValue, ok := r.Context().Value(VALUE_KEY).(float64)
-	if !ok {
-		http.Error(w, "Value not found in context", http.StatusInternalServerError)
-		return
-	}	
 
 	//сохраняем данные
-	err := stor.Push(mType, mName, mValue)
+	err := stor.Push(item)
 	if err != nil {
 		http.Error(w, fmt.Sprintf("Fail while push error: %s", err.Error()), http.StatusInternalServerError)
 		return

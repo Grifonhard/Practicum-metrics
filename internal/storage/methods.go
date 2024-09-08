@@ -14,13 +14,13 @@ func New() *MemStorage {
 	return &storage
 }
 
-func (ms *MemStorage) Push(typeMetric, name string, value float64) error {
-	switch typeMetric {
+func (ms *MemStorage) Push(metric *Metric) error {
+	switch metric.Type {
 	case TYPE1:
-		ms.ItemsGauge[name] = value
+		ms.ItemsGauge[metric.Name] = metric.Value
 		return nil
 	case TYPE2:
-		ms.ItemsCounter[name] = append(ms.ItemsCounter[name], value)
+		ms.ItemsCounter[metric.Name] = append(ms.ItemsCounter[metric.Name], metric.Value)
 		return nil
 	default:
 		return errors.New("Unknown metrics type")
@@ -31,19 +31,24 @@ func (ms *MemStorage) Pop(name string) ([]string, error) {
 	return nil, errors.New("Not implemented")
 }
 
-func ValidateBeforePush (mType, mName, mValue string) (float64, error){
-	var valueF float64
+func ValidateAndConvert (mType, mName, mValue string) (*Metric, error){
+	var result Metric
+	var err error
+	
 	if mType != TYPE1 && mType != TYPE2{
-		return 0, errors.New("Wrong type of metrics")
+		return nil, errors.New("Wrong type of metrics")
+	} else {
+		result.Type = mType
 	}
-	valueF, err := strconv.ParseFloat(mValue, 64)
+	result.Value, err = strconv.ParseFloat(mValue, 64)
 	if err != nil{
-		return 0, errors.New("Value is not float64")
+		return nil, errors.New("Value is not float64")
 	}
+	result.Name = mName
 	for _, name := range MetricNames{
 		if name == mName{
-			return valueF, nil
+			return &result, nil
 		}
 	}
-	return 0, errors.New("Wrong metric name")
+	return nil, errors.New("Wrong metric name")
 }
