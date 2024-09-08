@@ -8,13 +8,13 @@ import (
 func New() *MemStorage {
 	var storage MemStorage
 
-	storage.ItemsGauge = make(map[string]string)
-	storage.ItemsCounter = make(map[string][]string)
+	storage.ItemsGauge = make(map[string]float64)
+	storage.ItemsCounter = make(map[string][]float64)
 
 	return &storage
 }
 
-func (ms *MemStorage) Push(name, value, typeMetric string) error {
+func (ms *MemStorage) Push(typeMetric, name string, value float64) error {
 	switch typeMetric {
 	case TYPE1:
 		ms.ItemsGauge[name] = value
@@ -31,18 +31,19 @@ func (ms *MemStorage) Pop(name string) ([]string, error) {
 	return nil, errors.New("Not implemented")
 }
 
-func ValidateBeforePush (mType, mName, mValue string) error{
+func ValidateBeforePush (mType, mName, mValue string) (float64, error){
+	var valueF float64
 	if mType != TYPE1 && mType != TYPE2{
-		return errors.New("Wrong type of metrics")
+		return 0, errors.New("Wrong type of metrics")
 	}
-	_, err := strconv.ParseFloat(mValue, 64)
+	valueF, err := strconv.ParseFloat(mValue, 64)
 	if err != nil{
-		return errors.New("Value is not float64")
+		return 0, errors.New("Value is not float64")
 	}
 	for _, name := range MetricNames{
 		if name == mName{
-			return nil
+			return valueF, nil
 		}
 	}
-	return errors.New("Wrong metric name")
+	return 0, errors.New("Wrong metric name")
 }

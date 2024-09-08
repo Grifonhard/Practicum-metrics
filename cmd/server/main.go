@@ -16,16 +16,16 @@ func main() {
 
 	mux.Handle("/update/{type}/{name}/{value}", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request){
 			//валидируем прилетевшие значения
-			err := storage.ValidateBeforePush(r.PathValue("type"), r.PathValue("name"), r.PathValue("value"))
+			value, err := storage.ValidateBeforePush(r.PathValue("type"), r.PathValue("name"), r.PathValue("value"))
 			if err != nil {
 				http.Error(w, err.Error(), http.StatusBadRequest)
 			}
-			
+
 			//добавляем контекст в реквест
 			ctx := context.WithValue(r.Context(), web.STORAGE_KEY, stor)
 			ctx = context.WithValue(ctx, web.TYPE_KEY, r.PathValue("type"))
 			ctx = context.WithValue(ctx, web.NAME_KEY, r.PathValue("name"))
-			ctx = context.WithValue(ctx, web.VALUE_KEY, r.PathValue("value"))
+			ctx = context.WithValue(ctx, web.VALUE_KEY, value)
 
 			web.Update(w, r.WithContext(ctx))	
 		}))

@@ -19,6 +19,6 @@ type Stor interface {
 }
 
 type MemStorage struct {
-	ItemsGauge   map[string]string
-	ItemsCounter map[string][]string
+	ItemsGauge   map[string]float64
+	ItemsCounter map[string][]float64
 }

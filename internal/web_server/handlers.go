@@ -37,14 +37,14 @@ func Update(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Name not found in context", http.StatusInternalServerError)
 		return
 	}
-	mValue, ok := r.Context().Value(VALUE_KEY).(string)
+	mValue, ok := r.Context().Value(VALUE_KEY).(float64)
 	if !ok {
 		http.Error(w, "Value not found in context", http.StatusInternalServerError)
 		return
 	}	
 
 	//сохраняем данные
-	err := stor.Push(mName, mValue, mType)
+	err := stor.Push(mType, mName, mValue)
 	if err != nil {
 		http.Error(w, fmt.Sprintf("Fail while push error: %s", err.Error()), http.StatusInternalServerError)
 		return
