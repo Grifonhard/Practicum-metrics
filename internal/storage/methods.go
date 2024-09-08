@@ -41,7 +41,7 @@ func ValidateAndConvert (mType, mName, mValue string) (*Metric, error){
 		result.Type = mType
 	}
 	result.Value, err = strconv.ParseFloat(mValue, 64)
-	if err != nil{
+	if mValue == "" || err != nil{
 		return nil, errors.New("Value is not float64")
 	}
 	result.Name = mName

@@ -11,6 +11,8 @@ var MetricNames = []string{
     "Lookups", "MCacheInuse", "MCacheSys", "MSpanInuse", "MSpanSys", "Mallocs",
     "NextGC", "NumForcedGC", "NumGC", "OtherSys", "PauseTotalNs", "StackInuse",
     "StackSys", "Sys", "TotalAlloc", "RandomValue", "PollCount",
+
+	"testCounter", "testGauge",
 }
 
 type Stor interface {
