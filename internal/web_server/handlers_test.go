@@ -1,18 +1,21 @@
 package webserver
 
 import (
-	"context"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"testing"
 
 	"github.com/Grifonhard/Practicum-metrics/internal/storage"
+	"github.com/gin-gonic/gin"
 	"github.com/stretchr/testify/assert"
 )
 
-func TestMain(t *testing.T){
+func TestPost(t *testing.T){
 	//подготовка
 	stor := storage.New()
+
+	updatePath := "/update"
 	
 	name := "name"
 	value := 1.14
@@ -31,47 +34,44 @@ func TestMain(t *testing.T){
 		Value: value,
 	}
 
-	rSuccess1 := httptest.NewRequest(http.MethodPost, "/", nil)
-	ctx1 := context.WithValue(rSuccess1.Context(), STORAGE_KEY, stor)
-	ctx1 = context.WithValue(ctx1, METRIC_KEY, &item1)
-	rSuccess1 = rSuccess1.WithContext(ctx1)
+	urlSuccess1 :=  fmt.Sprintf("%s/%s/%s/%.2f", updatePath, item1.Type, item1.Name, item1.Value)
+	urlSuccess2 :=  fmt.Sprintf("%s/%s/%s/%.2f", updatePath, item2.Type, item2.Name, item2.Value)
+	urlWrongType := fmt.Sprintf("%s/%s/%s/%.2f", updatePath, "wrong", item1.Name, item1.Value)
+	urlWrongValue := fmt.Sprintf("%s/%s/%s/%s", updatePath, item1.Type, item1.Name, "wrong")
 
-	rSuccess2 := httptest.NewRequest(http.MethodPost, "/", nil)
-	ctx2 := context.WithValue(rSuccess2.Context(), STORAGE_KEY, stor)
-	ctx2 = context.WithValue(ctx2, METRIC_KEY, &item2)
-	rSuccess2 = rSuccess2.WithContext(ctx2)
+	methodSuccess := http.MethodPost
+	methodWrong := http.MethodGet
 
-	rWrongMethod := httptest.NewRequest(http.MethodGet, "/", nil)
-	ctxwm := context.WithValue(rWrongMethod.Context(), STORAGE_KEY, stor)
-	ctxwm = context.WithValue(ctxwm,  METRIC_KEY, &item2)
-	rWrongMethod = rWrongMethod.WithContext(ctxwm)
+	router := gin.Default()
 
-	rWithoutStor := httptest.NewRequest(http.MethodPost, "/", nil)
-	ctxws := context.WithValue(rWithoutStor.Context(), METRIC_KEY, &item1)
-	rWithoutStor = rWithoutStor.WithContext(ctxws)
+	router.POST("/update/:type/:name/:value", Middleware(), Update(stor))
 
 	tests := []struct{
-		req *http.Request
+		url string
+		method string
 		waitErr bool
 		message string
 	}{
-		{rSuccess1, false, "type 1 success"},
-		{rSuccess2, false, "type 2 success"},
-		{rWrongMethod, true, "wrong method"},
-		{rWithoutStor, true, "without store in context"},
+		{urlSuccess1, methodSuccess, false, "type 1 success"},
+		{urlSuccess2, methodSuccess, false, "type 2 success"},
+		{urlWrongType, methodSuccess, true, "wrong type"},
+		{urlWrongValue, methodSuccess, true, "wrong value"},
+		{urlSuccess1, methodWrong, true, "wrong method"},
 	}
 
-	
+	for _, tt := range tests {
+		t.Run(tt.message, func(t *testing.T) {
+			r := httptest.NewRequest(tt.method, tt.url, nil)
 
-	for _, tt := range tests{
-		w := httptest.NewRecorder()
+			w := httptest.NewRecorder()
 
-		Update(w, tt.req)
+			router.ServeHTTP(w, r)
 
-		if tt.waitErr{
-			assert.NotEqual(t, http.StatusOK, w.Result().StatusCode, tt.message)
-		} else {
-			assert.Equal(t, http.StatusOK, w.Result().StatusCode, tt.message)
-		}
+			if tt.waitErr {
+				assert.NotEqual(t, http.StatusOK, w.Code, tt.message)
+			} else {
+				assert.Equal(t, http.StatusOK, w.Code, tt.message)
+			}
+		})
 	}
 }

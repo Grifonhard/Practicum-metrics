@@ -1,32 +1,22 @@
 package main
 
 import (
-	"context"
 	"fmt"
 	"log"
 	"net/http"
 
 	"github.com/Grifonhard/Practicum-metrics/internal/storage"
 	web "github.com/Grifonhard/Practicum-metrics/internal/web_server"
+	"github.com/gin-gonic/gin"
 )
 
 func main() {
 	mux := http.NewServeMux()
 	stor := storage.New()
 
-	mux.Handle("/update/{type}/{name}/{value}", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request){
-			//валидируем прилетевшие значения
-			item, err := storage.ValidateAndConvert(r.PathValue("type"), r.PathValue("name"), r.PathValue("value"))
-			if err != nil {
-				http.Error(w, err.Error(), http.StatusBadRequest)
-			}
+	r := gin.Default()
 
-			//добавляем контекст в реквест
-			ctx := context.WithValue(r.Context(), web.STORAGE_KEY, stor)
-			ctx = context.WithValue(ctx, web.METRIC_KEY, item)
-
-			web.Update(w, r.WithContext(ctx))	
-		}))
+	r.POST("/update/:type/:name/:value", web.Middleware(), web.Update(stor))
 
 	fmt.Printf("Server start localhost:8080")
 	log.Fatal(http.ListenAndServe(":8080", mux))
