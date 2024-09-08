@@ -19,6 +19,6 @@ func main() {
 	r.GET("/value/:type/:name", web.Middleware(), web.Get(stor))
 	r.GET("/", web.List(stor))
 
-	fmt.Printf("Server start localhost:8080")
+	fmt.Printf("Server start localhost:8012")
 	log.Fatal(r.Run(":8012"))
 }
