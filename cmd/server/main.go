@@ -17,7 +17,7 @@ const (
 )
 
 type CFG struct{
-	Addr string `env:""ADDRESS`
+	Addr string `env:"ADDRESS"`
 }
 
 func main() {
