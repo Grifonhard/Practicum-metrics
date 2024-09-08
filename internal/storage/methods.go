@@ -38,22 +38,19 @@ func ValidateAndConvert (mType, mName, mValue string) (*Metric, error){
 	var result Metric
 	var err error
 
-	result.Type = mType
+	if mType == "" || mName == "" || mValue == ""{
+		return nil, errors.New("Empty field in metrics")
+	}
 	
-	/*if mType != TYPE1 && mType != TYPE2{
+	if mType != TYPE1 && mType != TYPE2{
 		return nil, errors.New("Wrong type of metrics")
 	} else {
 		result.Type = mType
-	}*/
+	}
 	result.Value, err = strconv.ParseFloat(mValue, 64)
 	if mValue == "" || err != nil{
 		return nil, errors.New("Value is not float64")
 	}
 	result.Name = mName
-	for _, name := range MetricNames{
-		if name == mName{
-			return &result, nil
-		}
-	}
-	return nil, errors.New("Wrong metric name")
+	return &result, nil
 }
