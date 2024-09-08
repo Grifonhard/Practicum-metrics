@@ -59,7 +59,7 @@ func Update (stor *storage.MemStorage) gin.HandlerFunc{
 	}
 }
 
-func Pop (stor *storage.MemStorage) gin.HandlerFunc{
+func Get (stor *storage.MemStorage) gin.HandlerFunc{
 	return func(c *gin.Context){
 		//извлекаем данные из контекста
 		itemInter, ok := c.Get(METRIC_KEY)

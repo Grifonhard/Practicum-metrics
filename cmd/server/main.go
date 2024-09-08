@@ -16,7 +16,7 @@ func main() {
 	r.LoadHTMLGlob("templates/*")
 
 	r.POST("/update/:type/:name/:value", web.Middleware(), web.Update(stor))
-	r.GET("/value/:type/:name", web.Middleware(), web.Pop(stor))
+	r.GET("/value/:type/:name", web.Middleware(), web.Get(stor))
 	r.GET("/", web.List(stor))
 
 	fmt.Printf("Server start localhost:8080")
