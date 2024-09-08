@@ -37,12 +37,14 @@ func (ms *MemStorage) Pop(name string) ([]string, error) {
 func ValidateAndConvert (mType, mName, mValue string) (*Metric, error){
 	var result Metric
 	var err error
+
+	result.Type = mType
 	
-	if mType != TYPE1 && mType != TYPE2{
+	/*if mType != TYPE1 && mType != TYPE2{
 		return nil, errors.New("Wrong type of metrics")
 	} else {
 		result.Type = mType
-	}
+	}*/
 	result.Value, err = strconv.ParseFloat(mValue, 64)
 	if mValue == "" || err != nil{
 		return nil, errors.New("Value is not float64")
