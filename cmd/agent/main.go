@@ -7,14 +7,14 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/Grifonhard/Practicum-metrics/internal/met_gen"
+	metgen "github.com/Grifonhard/Practicum-metrics/internal/met_gen"
 	"github.com/caarlos0/env/v10"
 )
 
 const (
-	DEFAULT_ADDR = "localhost:8080"
-	DEFAULT_REPORT_INTERVAL = 10
-	DEFAULT_POLL_INTERVAL = 2
+	DEFAULTADDR = "localhost:8080"
+	DEFAULTREPORTINTERVAL = 10
+	DEFAULTPOLLINTERVAL = 2
 )
 
 type CFG struct{
@@ -24,9 +24,9 @@ type CFG struct{
 }
 
 func main() {
-	address := flag.String("a", DEFAULT_ADDR, "адрес сервера")
-	reportInterval := flag.Int("r", DEFAULT_REPORT_INTERVAL, "секунд частота отправки метрик")
-	pollInterval := flag.Int("p", DEFAULT_POLL_INTERVAL, "секунд частота опроса метрик")
+	address := flag.String("a", DEFAULTADDR, "адрес сервера")
+	reportInterval := flag.Int("r", DEFAULTREPORTINTERVAL, "секунд частота отправки метрик")
+	pollInterval := flag.Int("p", DEFAULTPOLLINTERVAL, "секунд частота опроса метрик")
 
 	flag.Parse()
 

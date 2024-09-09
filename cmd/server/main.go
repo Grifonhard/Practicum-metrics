@@ -12,7 +12,7 @@ import (
 )
 
 const (
-	DEFAULT_ADDR = "localhost:8080"
+	DEFAULTADDR = "localhost:8080"
 )
 
 type CFG struct{
@@ -20,7 +20,7 @@ type CFG struct{
 }
 
 func main() {
-	addr := flag.String("a", DEFAULT_ADDR, "server port")
+	addr := flag.String("a", DEFAULTADDR, "server port")
 
 	flag.Parse()
 

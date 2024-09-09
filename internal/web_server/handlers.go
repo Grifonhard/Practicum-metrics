@@ -9,9 +9,9 @@ import (
 )
 
 const (
-	PARAMS_AMOUNT = 3
-	STORAGE_KEY   = "storage"
-	METRIC_KEY = "metric"
+	PARAMSAMOUNT = 3
+	STORAGEKEY   = "storage"
+	METRICKEY = "metric"
 )
 
 func Middleware() gin.HandlerFunc {
@@ -23,7 +23,7 @@ func Middleware() gin.HandlerFunc {
 			return
 		}
 
-		c.Set(METRIC_KEY, item)
+		c.Set(METRICKEY, item)
 
 		c.Next()
 	}
@@ -32,7 +32,7 @@ func Middleware() gin.HandlerFunc {
 func Update (stor *storage.MemStorage) gin.HandlerFunc{
 	return func(c *gin.Context){
 		//извлекаем данные из контекста
-		itemInter, ok := c.Get(METRIC_KEY)
+		itemInter, ok := c.Get(METRICKEY)
 		if !ok {
 			c.String(http.StatusInternalServerError, "Metric not found in context")
 			c.Abort()
@@ -62,7 +62,7 @@ func Update (stor *storage.MemStorage) gin.HandlerFunc{
 func Get (stor *storage.MemStorage) gin.HandlerFunc{
 	return func(c *gin.Context){
 		//извлекаем данные из контекста
-		itemInter, ok := c.Get(METRIC_KEY)
+		itemInter, ok := c.Get(METRICKEY)
 		if !ok {
 			c.String(http.StatusInternalServerError, "Metric not found in context")
 			c.Abort()
