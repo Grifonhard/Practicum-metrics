@@ -1,19 +1,38 @@
 package main
 
 import (
+	"flag"
 	"fmt"
 	"log"
-	"flag"
 
 	"github.com/Grifonhard/Practicum-metrics/internal/storage"
 	web "github.com/Grifonhard/Practicum-metrics/internal/web_server"
+	"github.com/caarlos0/env/v10"
 	"github.com/gin-gonic/gin"
 )
 
+const (
+	DEFAULT_ADDR = "localhost:8080"
+)
+
+type CFG struct{
+	Addr string `env:"ADDRESS"`
+}
+
 func main() {
-	port := flag.String("a", "8080", "server port")
+	addr := flag.String("a", DEFAULT_ADDR, "server port")
 
 	flag.Parse()
+
+	var cfg CFG
+	err := env.Parse(&cfg)
+	if err != nil{
+		log.Fatal(err)
+	}
+
+	if cfg.Addr != ""{
+		*addr = cfg.Addr
+	}
 
 	stor := storage.New()
 
@@ -24,6 +43,6 @@ func main() {
 	r.GET("/value/:type/:name", web.Middleware(), web.Get(stor))
 	r.GET("/", web.List(stor))
 
-	fmt.Printf("Server start localhost:%s\n", *port)
-	log.Fatal(r.Run(":" + *port))
+	fmt.Printf("Server start %s\n", *addr)
+	log.Fatal(r.Run(*addr))
 }
