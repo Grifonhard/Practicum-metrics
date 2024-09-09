@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"log"
 	"net/http"
-	"strings"
 	"time"
 
 	"github.com/Grifonhard/Practicum-metrics/internal/met_gen"
@@ -38,11 +37,7 @@ func main() {
 	}
 
 	if cfg.Addr != ""{
-		if strings.Contains(cfg.Addr, "localhost"){
-			address = cfg.Addr
-		} else{
-			address = "localhost:" + cfg.Addr
-		}
+		address = cfg.Addr
 	} else{
 		address = DEFAULT_ADDR
 	}

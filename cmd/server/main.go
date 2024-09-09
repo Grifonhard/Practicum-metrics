@@ -4,7 +4,6 @@ import (
 	"flag"
 	"fmt"
 	"log"
-	"strings"
 
 	"github.com/Grifonhard/Practicum-metrics/internal/storage"
 	web "github.com/Grifonhard/Practicum-metrics/internal/web_server"
@@ -13,7 +12,7 @@ import (
 )
 
 const (
-	DEFAULT_PORT = "8080"
+	DEFAULT_ADDR = "localhost:8080"
 )
 
 type CFG struct{
@@ -21,11 +20,9 @@ type CFG struct{
 }
 
 func main() {
-	port := flag.String("a", DEFAULT_PORT, "server port")
+	addr := flag.String("a", DEFAULT_ADDR, "server port")
 
 	flag.Parse()
-
-	*port, _ = strings.CutPrefix(*port, "localhost:")
 
 	var cfg CFG
 	err := env.Parse(&cfg)
@@ -34,7 +31,7 @@ func main() {
 	}
 
 	if cfg.Addr != ""{
-		*port, _ = strings.CutPrefix(cfg.Addr, "localhost:")
+		*addr = cfg.Addr
 	}
 
 	stor := storage.New()
@@ -46,6 +43,6 @@ func main() {
 	r.GET("/value/:type/:name", web.Middleware(), web.Get(stor))
 	r.GET("/", web.List(stor))
 
-	fmt.Printf("Server start localhost:%s\n", *port)
-	log.Fatal(r.Run(":" + *port))
+	fmt.Printf("Server start %s\n", *addr)
+	log.Fatal(r.Run(*addr))
 }
