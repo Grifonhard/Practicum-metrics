@@ -103,9 +103,31 @@ func List (stor *storage.MemStorage) gin.HandlerFunc{
 			return
 		}
 
-		c.HTML(http.StatusOK, "list.html", gin.H{
+		/*c.HTML(http.StatusOK, "list.html", gin.H{
 			"Title": "List of metrics",
 			"Items": list,
-		})
+		})*/
+
+        html := `
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <title>List of metrics</title>
+        </head>
+        <body>
+            <h1>List of metrics</h1>
+            <ul>`
+
+        for _, item := range list {
+            html += fmt.Sprintf("<li>%s</li>", item)
+        }
+
+        html += `
+            </ul>
+        </body>
+        </html>
+        `
+
+        c.Data(http.StatusOK, "text/html; charset=utf-8", []byte(html))
 	}
 }

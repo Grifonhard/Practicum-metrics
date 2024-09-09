@@ -38,7 +38,7 @@ func main() {
 	stor := storage.New()
 
 	r := gin.Default()
-	r.LoadHTMLGlob("templates/*")
+	//r.LoadHTMLGlob("templates/*")
 
 	r.POST("/update/:type/:name/:value", web.Middleware(), web.Update(stor))
 	r.GET("/value/:type/:name", web.Middleware(), web.Get(stor))
