@@ -45,12 +45,15 @@ func (ms *MemStorage) Get(metric *Metric) (string, error) {
 		}
 		return fmt.Sprint(result), nil
 	case TYPE2:
-		result, ok := ms.ItemsCounter[metric.Name]
+		values, ok := ms.ItemsCounter[metric.Name]
 		if !ok{
 			return "", errors.New("No data for this metric")
 		}
-		last := len(result) - 1
-		return fmt.Sprint(result[last]), nil
+		var result float64
+		for _, v := range values{
+			result += v
+		}
+		return fmt.Sprint(result), nil
 	default:
 		return "", errors.New("Unknown metrics type")
 	}
