@@ -24,7 +24,7 @@ type CFG struct{
 }
 
 func main() {
-	var address string
+	address := flag.String("a", DEFAULT_ADDR, "адрес сервера")
 	reportInterval := flag.Int("r", DEFAULT_REPORT_INTERVAL, "секунд частота отправки метрик")
 	pollInterval := flag.Int("p", DEFAULT_POLL_INTERVAL, "секунд частота опроса метрик")
 
@@ -37,10 +37,8 @@ func main() {
 	}
 
 	if cfg.Addr != ""{
-		address = cfg.Addr
-	} else{
-		address = DEFAULT_ADDR
-	}
+		*address = cfg.Addr
+	} 
 	if cfg.PollInterval != 0 {
 		pollInterval = &cfg.PollInterval
 	}
@@ -67,10 +65,10 @@ func main() {
 			}
 			go func() {
 				for k, v := range gauge {
-					sendMetric(address, "gauge", k, v)
+					sendMetric(*address, "gauge", k, v)
 				}
 				for k, v := range counter {
-					sendMetric(address, "counter", k, v)
+					sendMetric(*address, "counter", k, v)
 				}
 				return
 			}()
