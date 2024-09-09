@@ -25,6 +25,8 @@ func main() {
 
 	flag.Parse()
 
+	*port, _ = strings.CutPrefix(*port, "localhost:")
+
 	var cfg CFG
 	err := env.Parse(&cfg)
 	if err != nil{
