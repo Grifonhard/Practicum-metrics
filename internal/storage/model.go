@@ -6,7 +6,7 @@ const (
 )
 
 type Stor interface {
-	Push(name, value, type_metric string) error
+	Push(name, value, typeMetric string) error
 	Pop(name string) ([]string, error)
 }
 

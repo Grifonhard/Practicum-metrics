@@ -70,7 +70,6 @@ func main() {
 				for k, v := range counter {
 					sendMetric(*address, "counter", k, v)
 				}
-				return
 			}()
 		}
 	}

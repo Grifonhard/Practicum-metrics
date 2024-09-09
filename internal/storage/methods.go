@@ -19,7 +19,7 @@ func New() *MemStorage {
 
 func (ms *MemStorage) Push(metric *Metric) error {
 	if metric == nil{
-		return errors.New("Metric is empty")
+		return errors.New("metric is empty")
 	}
 	switch metric.Type {
 	case TYPE1:
@@ -29,25 +29,25 @@ func (ms *MemStorage) Push(metric *Metric) error {
 		ms.ItemsCounter[metric.Name] = append(ms.ItemsCounter[metric.Name], metric.Value)
 		return nil
 	default:
-		return errors.New("Unknown metrics type")
+		return errors.New("unknown metrics type")
 	}
 }
 
 func (ms *MemStorage) Get(metric *Metric) (string, error) {
 	if metric == nil{
-		return "", errors.New("Metric is empty")
+		return "", errors.New("metric is empty")
 	}
 	switch metric.Type {
 	case TYPE1:
 		result, ok := ms.ItemsGauge[metric.Name]
 		if !ok{
-			return "", errors.New("No data for this metric")
+			return "", errors.New("no data for this metric")
 		}
 		return fmt.Sprint(result), nil
 	case TYPE2:
 		values, ok := ms.ItemsCounter[metric.Name]
 		if !ok{
-			return "", errors.New("No data for this metric")
+			return "", errors.New("no data for this metric")
 		}
 		var result float64
 		for _, v := range values{
@@ -55,7 +55,7 @@ func (ms *MemStorage) Get(metric *Metric) (string, error) {
 		}
 		return fmt.Sprint(result), nil
 	default:
-		return "", errors.New("Unknown metrics type")
+		return "", errors.New("unknown metrics type")
 	}
 }
 
@@ -84,17 +84,17 @@ func ValidateAndConvert (method, mType, mName, mValue string) (*Metric, error){
 	}
 
 	if mType == "" || mName == "" || mValue == "" {
-		return nil, errors.New("Empty field in metrics")
+		return nil, errors.New("empty field in metrics")
 	}
 	
 	if mType != TYPE1 && mType != TYPE2{
-		return nil, errors.New("Wrong type of metrics")
+		return nil, errors.New("wrong type of metrics")
 	} else {
 		result.Type = mType
 	}
 	result.Value, err = strconv.ParseFloat(mValue, 64)
 	if err != nil{
-		return nil, errors.New("Value is not float64")
+		return nil, errors.New("value is not float64")
 	}
 	result.Name = mName
 	return &result, nil

@@ -34,13 +34,13 @@ func Update (stor *storage.MemStorage) gin.HandlerFunc{
 		//извлекаем данные из контекста
 		itemInter, ok := c.Get(METRICKEY)
 		if !ok {
-			c.String(http.StatusInternalServerError, "Metric not found in context")
+			c.String(http.StatusInternalServerError, "metric not found in context")
 			c.Abort()
 			return
 		}
 		item, ok := itemInter.(*storage.Metric)
 		if !ok {
-			c.String(http.StatusInternalServerError, "Wrong type of item metric")
+			c.String(http.StatusInternalServerError, "wrong type of item metric")
 			c.Abort()
 			return
 		}
@@ -48,14 +48,14 @@ func Update (stor *storage.MemStorage) gin.HandlerFunc{
 		//сохраняем данные
 		err := stor.Push(item)
 		if err != nil {
-			c.String(http.StatusInternalServerError, fmt.Sprintf("Fail while push error: %s", err.Error()))
+			c.String(http.StatusInternalServerError, fmt.Sprintf("fail while push error: %s", err.Error()))
 			c.Abort()
 			return
 		}
-		c.Header("Сontent-Length", fmt.Sprint(len("Success")))
+		c.Header("Сontent-Length", fmt.Sprint(len("success")))
 		c.Header("Content-Type", "text/plain; charset=utf-8")
 	
-		c.String(http.StatusOK, "Success")
+		c.String(http.StatusOK, "success")
 	}
 }
 
@@ -64,20 +64,20 @@ func Get (stor *storage.MemStorage) gin.HandlerFunc{
 		//извлекаем данные из контекста
 		itemInter, ok := c.Get(METRICKEY)
 		if !ok {
-			c.String(http.StatusInternalServerError, "Metric not found in context")
+			c.String(http.StatusInternalServerError, "metric not found in context")
 			c.Abort()
 			return
 		}
 		item, ok := itemInter.(*storage.Metric)
 		if !ok {
-			c.String(http.StatusInternalServerError, "Wrong type of item metric")
+			c.String(http.StatusInternalServerError, "wrong type of item metric")
 			c.Abort()
 			return
 		}
 
 		//получаем данные
 		value, err := stor.Get(item)
-		if err != nil && err.Error() == "Metric is empty" {
+		if err != nil && err.Error() == "metric is empty" {
 			c.String(http.StatusInternalServerError, err.Error())
 			c.Abort()
 			return
