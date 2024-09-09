@@ -4,6 +4,7 @@ import (
 	"flag"
 	"fmt"
 	"log"
+	"net/http"
 	"strings"
 
 	"github.com/Grifonhard/Practicum-metrics/internal/storage"
@@ -45,5 +46,5 @@ func main() {
 	r.GET("/", web.List(stor))
 
 	fmt.Printf("Server start localhost:%s\n", *port)
-	log.Fatal(r.Run(":" + *port))
+	log.Fatal(http.ListenAndServe(":" + *port, r))
 }
