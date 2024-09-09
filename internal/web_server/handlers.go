@@ -103,12 +103,12 @@ func List (stor *storage.MemStorage) gin.HandlerFunc{
 			return
 		}
 
-		/*c.HTML(http.StatusOK, "list.html", gin.H{
+		c.HTML(http.StatusOK, "list.html", gin.H{
 			"Title": "List of metrics",
 			"Items": list,
-		})*/
+		})
 
-        html := `
+        /*html := `
         <!DOCTYPE html>
         <html>
         <head>
@@ -128,6 +128,6 @@ func List (stor *storage.MemStorage) gin.HandlerFunc{
         </html>
         `
 
-        c.Data(http.StatusOK, "text/html; charset=utf-8", []byte(html))
+        c.Data(http.StatusOK, "text/html; charset=utf-8", []byte(html))*/
 	}
 }
