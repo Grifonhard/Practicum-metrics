@@ -1,7 +1,6 @@
 package storage
 
 import (
-	"errors"
 	"fmt"
 	"net/http"
 	"strconv"
@@ -20,7 +19,7 @@ func New() *MemStorage {
 
 func (ms *MemStorage) Push(metric *Metric) error {
 	if metric == nil {
-		return errors.New("metric is empty")
+		return MetricEmpty
 	}
 	switch metric.Type {
 	case TYPEGAUGE:
@@ -30,25 +29,25 @@ func (ms *MemStorage) Push(metric *Metric) error {
 		ms.ItemsCounter[metric.Name] = append(ms.ItemsCounter[metric.Name], metric.Value)
 		return nil
 	default:
-		return errors.New("unknown metrics type")
+		return MetricTypeUnknown
 	}
 }
 
 func (ms *MemStorage) Get(metric *Metric) (string, error) {
 	if metric == nil {
-		return "", errors.New("metric is empty")
+		return "", MetricEmpty
 	}
 	switch metric.Type {
 	case TYPEGAUGE:
 		result, ok := ms.ItemsGauge[metric.Name]
 		if !ok {
-			return "", errors.New("no data for this metric")
+			return "", MetricNoData
 		}
 		return fmt.Sprint(result), nil
 	case TYPECOUNTER:
 		values, ok := ms.ItemsCounter[metric.Name]
 		if !ok {
-			return "", errors.New("no data for this metric")
+			return "", MetricNoData
 		}
 		var result float64
 		for _, v := range values {
@@ -56,7 +55,7 @@ func (ms *MemStorage) Get(metric *Metric) (string, error) {
 		}
 		return fmt.Sprint(result), nil
 	default:
-		return "", errors.New("unknown metrics type")
+		return "", MetricTypeUnknown
 	}
 }
 
@@ -96,17 +95,17 @@ func ValidateAndConvert(method, mType, mName, mValue string) (*Metric, error) {
 	}
 
 	if mType == "" || mName == "" || mValue == "" {
-		return nil, errors.New("empty field in metrics")
+		return nil, MetricValEmptyField
 	}
 
 	if mType != TYPEGAUGE && mType != TYPECOUNTER {
-		return nil, errors.New("wrong type of metrics")
+		return nil, MetricValWrongType
 	} else {
 		result.Type = mType
 	}
 	result.Value, err = strconv.ParseFloat(mValue, 64)
 	if err != nil {
-		return nil, errors.New("value is not float64")
+		return nil, MetricValValueIsNotFloat
 	}
 	result.Name = mName
 	return &result, nil
