@@ -1,8 +1,8 @@
 package storage
 
 const (
-	TYPE1 = "gauge"
-	TYPE2 = "counter"
+	TYPEGAUGE   = "gauge"
+	TYPECOUNTER = "counter"
 )
 
 type Stor interface {
@@ -15,8 +15,8 @@ type MemStorage struct {
 	ItemsCounter map[string][]float64
 }
 
-type Metric struct{
-	Type string
-	Name string
+type Metric struct {
+	Type  string
+	Name  string
 	Value float64
 }

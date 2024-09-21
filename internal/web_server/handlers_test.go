@@ -11,31 +11,31 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestPost(t *testing.T){
+func TestPost(t *testing.T) {
 	//подготовка
 	stor := storage.New()
 
 	updatePath := "/update"
-	
+
 	name := "name"
 	value := 1.14
-	itemType1 := storage.TYPE1
-	itemType2 := storage.TYPE2
+	itemType1 := storage.TYPEGAUGE
+	itemType2 := storage.TYPECOUNTER
 
 	item1 := storage.Metric{
-		Type: itemType1,
-		Name: name,
+		Type:  itemType1,
+		Name:  name,
 		Value: value,
 	}
 
 	item2 := storage.Metric{
-		Type: itemType2,
-		Name: name,
+		Type:  itemType2,
+		Name:  name,
 		Value: value,
 	}
 
-	urlSuccess1 :=  fmt.Sprintf("%s/%s/%s/%.2f", updatePath, item1.Type, item1.Name, item1.Value)
-	urlSuccess2 :=  fmt.Sprintf("%s/%s/%s/%.2f", updatePath, item2.Type, item2.Name, item2.Value)
+	urlSuccess1 := fmt.Sprintf("%s/%s/%s/%.2f", updatePath, item1.Type, item1.Name, item1.Value)
+	urlSuccess2 := fmt.Sprintf("%s/%s/%s/%.2f", updatePath, item2.Type, item2.Name, item2.Value)
 	urlWrongType := fmt.Sprintf("%s/%s/%s/%.2f", updatePath, "wrong", item1.Name, item1.Value)
 	urlWrongValue := fmt.Sprintf("%s/%s/%s/%s", updatePath, item1.Type, item1.Name, "wrong")
 
@@ -46,9 +46,9 @@ func TestPost(t *testing.T){
 
 	router.POST("/update/:type/:name/:value", Middleware(), Update(stor))
 
-	tests := []struct{
-		url string
-		method string
+	tests := []struct {
+		url     string
+		method  string
 		waitErr bool
 		message string
 	}{

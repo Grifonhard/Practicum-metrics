@@ -18,14 +18,14 @@ func New() *MemStorage {
 }
 
 func (ms *MemStorage) Push(metric *Metric) error {
-	if metric == nil{
+	if metric == nil {
 		return errors.New("metric is empty")
 	}
 	switch metric.Type {
-	case TYPE1:
+	case TYPEGAUGE:
 		ms.ItemsGauge[metric.Name] = metric.Value
 		return nil
-	case TYPE2:
+	case TYPECOUNTER:
 		ms.ItemsCounter[metric.Name] = append(ms.ItemsCounter[metric.Name], metric.Value)
 		return nil
 	default:
@@ -34,23 +34,23 @@ func (ms *MemStorage) Push(metric *Metric) error {
 }
 
 func (ms *MemStorage) Get(metric *Metric) (string, error) {
-	if metric == nil{
+	if metric == nil {
 		return "", errors.New("metric is empty")
 	}
 	switch metric.Type {
-	case TYPE1:
+	case TYPEGAUGE:
 		result, ok := ms.ItemsGauge[metric.Name]
-		if !ok{
+		if !ok {
 			return "", errors.New("no data for this metric")
 		}
 		return fmt.Sprint(result), nil
-	case TYPE2:
+	case TYPECOUNTER:
 		values, ok := ms.ItemsCounter[metric.Name]
-		if !ok{
+		if !ok {
 			return "", errors.New("no data for this metric")
 		}
 		var result float64
-		for _, v := range values{
+		for _, v := range values {
 			result += v
 		}
 		return fmt.Sprint(result), nil
@@ -61,12 +61,12 @@ func (ms *MemStorage) Get(metric *Metric) (string, error) {
 
 func (ms *MemStorage) List() ([]string, error) {
 	var list []string
-	for n, v := range ms.ItemsGauge{
+	for n, v := range ms.ItemsGauge {
 		list = append(list, fmt.Sprintf("%s: %f", n, v))
 	}
-	for n, ves := range ms.ItemsCounter{
+	for n, ves := range ms.ItemsCounter {
 		var values string
-		for _, v := range ves{
+		for _, v := range ves {
 			values = fmt.Sprintf("%s, %s", values, fmt.Sprintf("%f", v))
 		}
 		values, _ = strings.CutPrefix(values, ", ")
@@ -75,7 +75,7 @@ func (ms *MemStorage) List() ([]string, error) {
 	return list, nil
 }
 
-func ValidateAndConvert (method, mType, mName, mValue string) (*Metric, error){
+func ValidateAndConvert(method, mType, mName, mValue string) (*Metric, error) {
 	var result Metric
 	var err error
 
@@ -86,14 +86,14 @@ func ValidateAndConvert (method, mType, mName, mValue string) (*Metric, error){
 	if mType == "" || mName == "" || mValue == "" {
 		return nil, errors.New("empty field in metrics")
 	}
-	
-	if mType != TYPE1 && mType != TYPE2{
+
+	if mType != TYPEGAUGE && mType != TYPECOUNTER {
 		return nil, errors.New("wrong type of metrics")
 	} else {
 		result.Type = mType
 	}
 	result.Value, err = strconv.ParseFloat(mValue, 64)
-	if err != nil{
+	if err != nil {
 		return nil, errors.New("value is not float64")
 	}
 	result.Name = mName

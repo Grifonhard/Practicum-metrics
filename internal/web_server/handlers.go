@@ -11,11 +11,11 @@ import (
 const (
 	PARAMSAMOUNT = 3
 	STORAGEKEY   = "storage"
-	METRICKEY = "metric"
+	METRICKEY    = "metric"
 )
 
 func Middleware() gin.HandlerFunc {
-	return func(c *gin.Context){
+	return func(c *gin.Context) {
 		item, err := storage.ValidateAndConvert(c.Request.Method, c.Param("type"), c.Param("name"), c.Param("value"))
 		if err != nil {
 			c.String(http.StatusBadRequest, err.Error())
@@ -29,8 +29,8 @@ func Middleware() gin.HandlerFunc {
 	}
 }
 
-func Update (stor *storage.MemStorage) gin.HandlerFunc{
-	return func(c *gin.Context){
+func Update(stor *storage.MemStorage) gin.HandlerFunc {
+	return func(c *gin.Context) {
 		//извлекаем данные из контекста
 		itemInter, ok := c.Get(METRICKEY)
 		if !ok {
@@ -44,7 +44,7 @@ func Update (stor *storage.MemStorage) gin.HandlerFunc{
 			c.Abort()
 			return
 		}
-	
+
 		//сохраняем данные
 		err := stor.Push(item)
 		if err != nil {
@@ -54,13 +54,13 @@ func Update (stor *storage.MemStorage) gin.HandlerFunc{
 		}
 		c.Header("Сontent-Length", fmt.Sprint(len("success")))
 		c.Header("Content-Type", "text/plain; charset=utf-8")
-	
+
 		c.String(http.StatusOK, "success")
 	}
 }
 
-func Get (stor *storage.MemStorage) gin.HandlerFunc{
-	return func(c *gin.Context){
+func Get(stor *storage.MemStorage) gin.HandlerFunc {
+	return func(c *gin.Context) {
 		//извлекаем данные из контекста
 		itemInter, ok := c.Get(METRICKEY)
 		if !ok {
@@ -81,7 +81,7 @@ func Get (stor *storage.MemStorage) gin.HandlerFunc{
 			c.String(http.StatusInternalServerError, err.Error())
 			c.Abort()
 			return
-		} else if err != nil{
+		} else if err != nil {
 			c.String(http.StatusNotFound, err.Error())
 			c.Abort()
 			return
@@ -94,7 +94,7 @@ func Get (stor *storage.MemStorage) gin.HandlerFunc{
 	}
 }
 
-func List (stor *storage.MemStorage) gin.HandlerFunc{
+func List(stor *storage.MemStorage) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		list, err := stor.List()
 		if err != nil {

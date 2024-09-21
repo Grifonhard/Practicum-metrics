@@ -6,32 +6,31 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestPush(t *testing.T){
+func TestPush(t *testing.T) {
 	stor := New()
 
 	metrics := []Metric{
 		{
-			Type: "gauge",
-			Name: "name1",
-			Value: 1.12, 
+			Type:  "gauge",
+			Name:  "name1",
+			Value: 1.12,
 		},
 		{
-			Type: "gauge",
-			Name: "name1",
-			Value: 2.24, 
+			Type:  "gauge",
+			Name:  "name1",
+			Value: 2.24,
 		},
 		{
-			Type: "counter",
-			Name: "name2",
-			Value: 3.36, 
+			Type:  "counter",
+			Name:  "name2",
+			Value: 3.36,
 		},
 		{
-			Type: "counter",
-			Name: "name2",
-			Value: 4.48, 
+			Type:  "counter",
+			Name:  "name2",
+			Value: 4.48,
 		},
 	}
-	
 
 	err := stor.Push(&metrics[0])
 	assert.NoError(t, err)
@@ -44,6 +43,6 @@ func TestPush(t *testing.T){
 	assert.NoError(t, err)
 	err = stor.Push(&metrics[3])
 	assert.NoError(t, err)
-	
-	assert.Equal(t, stor.ItemsCounter[metrics[3].Name], []float64{metrics[2].Value, metrics[3].Value})	
+
+	assert.Equal(t, stor.ItemsCounter[metrics[3].Name], []float64{metrics[2].Value, metrics[3].Value})
 }
