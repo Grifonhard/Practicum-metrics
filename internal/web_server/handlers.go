@@ -77,7 +77,7 @@ func Get(stor *storage.MemStorage) gin.HandlerFunc {
 
 		//получаем данные
 		value, err := stor.Get(item)
-		if err != nil && err.Error() == "metric is empty" {
+		if err != nil && err == storage.MetricEmpty {
 			c.String(http.StatusInternalServerError, err.Error())
 			c.Abort()
 			return
