@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"strconv"
 	"strings"
+	"sync"
 )
 
 func New() *MemStorage {
@@ -61,9 +62,12 @@ func (ms *MemStorage) Get(metric *Metric) (string, error) {
 
 func (ms *MemStorage) List() ([]string, error) {
 	var list []string
+	var wg sync.WaitGroup
+	wg.Add(len(ms.ItemsGauge))
 	for n, v := range ms.ItemsGauge {
-		list = append(list, fmt.Sprintf("%s: %f", n, v))
+		go ms.listRoutin(&list, fmt.Sprintf("%s: %f", n, v), wg)
 	}
+	wg.Wait()
 	for n, ves := range ms.ItemsCounter {
 		var values string
 		for _, v := range ves {
@@ -72,7 +76,15 @@ func (ms *MemStorage) List() ([]string, error) {
 		values, _ = strings.CutPrefix(values, ", ")
 		list = append(list, fmt.Sprintf("%s: %s", n, values))
 	}
+
 	return list, nil
+}
+
+func (ms *MemStorage) listRoutin(list *[]string, info string, wg sync.WaitGroup) {
+	ms.mu.Lock()
+	defer wg.Done()
+	defer ms.mu.Unlock()
+	(*list) = append((*list), info)
 }
 
 func ValidateAndConvert(method, mType, mName, mValue string) (*Metric, error) {

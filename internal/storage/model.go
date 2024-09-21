@@ -1,5 +1,7 @@
 package storage
 
+import "sync"
+
 const (
 	TYPEGAUGE   = "gauge"
 	TYPECOUNTER = "counter"
@@ -13,6 +15,7 @@ type Stor interface {
 type MemStorage struct {
 	ItemsGauge   map[string]float64
 	ItemsCounter map[string][]float64
+	mu           sync.Mutex
 }
 
 type Metric struct {
