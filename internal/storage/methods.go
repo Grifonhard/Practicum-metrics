@@ -19,7 +19,7 @@ func New() *MemStorage {
 
 func (ms *MemStorage) Push(metric *Metric) error {
 	if metric == nil {
-		return MetricEmpty
+		return ErrMetricEmpty
 	}
 	switch metric.Type {
 	case TYPEGAUGE:
@@ -29,25 +29,25 @@ func (ms *MemStorage) Push(metric *Metric) error {
 		ms.ItemsCounter[metric.Name] = append(ms.ItemsCounter[metric.Name], metric.Value)
 		return nil
 	default:
-		return MetricTypeUnknown
+		return ErrMetricTypeUnknown
 	}
 }
 
 func (ms *MemStorage) Get(metric *Metric) (string, error) {
 	if metric == nil {
-		return "", MetricEmpty
+		return "", ErrMetricEmpty
 	}
 	switch metric.Type {
 	case TYPEGAUGE:
 		result, ok := ms.ItemsGauge[metric.Name]
 		if !ok {
-			return "", MetricNoData
+			return "", ErrMetricNoData
 		}
 		return fmt.Sprint(result), nil
 	case TYPECOUNTER:
 		values, ok := ms.ItemsCounter[metric.Name]
 		if !ok {
-			return "", MetricNoData
+			return "", ErrMetricNoData
 		}
 		var result float64
 		for _, v := range values {
@@ -55,7 +55,7 @@ func (ms *MemStorage) Get(metric *Metric) (string, error) {
 		}
 		return fmt.Sprint(result), nil
 	default:
-		return "", MetricTypeUnknown
+		return "", ErrMetricTypeUnknown
 	}
 }
 
@@ -95,17 +95,17 @@ func ValidateAndConvert(method, mType, mName, mValue string) (*Metric, error) {
 	}
 
 	if mType == "" || mName == "" || mValue == "" {
-		return nil, MetricValEmptyField
+		return nil, ErrMetricValEmptyField
 	}
 
 	if mType != TYPEGAUGE && mType != TYPECOUNTER {
-		return nil, MetricValWrongType
+		return nil, ErrMetricValWrongType
 	} else {
 		result.Type = mType
 	}
 	result.Value, err = strconv.ParseFloat(mValue, 64)
 	if err != nil {
-		return nil, MetricValValueIsNotFloat
+		return nil, ErrMetricValValueIsNotFloat
 	}
 	result.Name = mName
 	return &result, nil
