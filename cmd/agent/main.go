@@ -88,6 +88,8 @@ func sendMetric(addr, mType, mKey, mValue string) {
 
 	cl := &http.Client{}
 
+	cl.Timeout = time.Minute
+
 	resp, err := cl.Do(req)
 	if err != nil {
 		fmt.Printf("Fail while sending metrics: %s", err.Error())
