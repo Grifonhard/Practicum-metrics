@@ -44,7 +44,7 @@ func TestPost(t *testing.T) {
 
 	router := gin.Default()
 
-	router.POST("/update/:type/:name/:value", Middleware(), Update(stor))
+	router.POST("/update/:type/:name/:value", DataExtraction(), Update(stor))
 
 	tests := []struct {
 		url     string

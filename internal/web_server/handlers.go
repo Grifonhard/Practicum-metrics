@@ -14,7 +14,7 @@ const (
 	METRICKEY    = "metric"
 )
 
-func Middleware() gin.HandlerFunc {
+func DataExtraction() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		item, err := storage.ValidateAndConvert(c.Request.Method, c.Param("type"), c.Param("name"), c.Param("value"))
 		if err != nil {

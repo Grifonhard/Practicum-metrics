@@ -15,7 +15,7 @@ const (
 	DEFAULTADDR = "localhost:8080"
 )
 
-type CFG struct{
+type CFG struct {
 	Addr string `env:"ADDRESS"`
 }
 
@@ -26,11 +26,11 @@ func main() {
 
 	var cfg CFG
 	err := env.Parse(&cfg)
-	if err != nil{
+	if err != nil {
 		log.Fatal(err)
 	}
 
-	if cfg.Addr != ""{
+	if cfg.Addr != "" {
 		*addr = cfg.Addr
 	}
 
@@ -39,8 +39,8 @@ func main() {
 	r := gin.Default()
 	r.LoadHTMLGlob("templates/*")
 
-	r.POST("/update/:type/:name/:value", web.Middleware(), web.Update(stor))
-	r.GET("/value/:type/:name", web.Middleware(), web.Get(stor))
+	r.POST("/update/:type/:name/:value", web.DataExtraction(), web.Update(stor))
+	r.GET("/value/:type/:name", web.DataExtraction(), web.Get(stor))
 	r.GET("/", web.List(stor))
 
 	fmt.Printf("Server start %s\n", *addr)
