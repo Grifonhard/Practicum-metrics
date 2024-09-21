@@ -61,12 +61,12 @@ func (ms *MemStorage) Get(metric *Metric) (string, error) {
 }
 
 func (ms *MemStorage) List() ([]string, error) {
-	list := make([]string, len(ms.ItemsCounter) + len(ms.ItemsCounter))
+	list := make([]string, len(ms.ItemsCounter)+len(ms.ItemsCounter))
 	var wg sync.WaitGroup
 	wg.Add(len(ms.ItemsGauge))
 	for n, v := range ms.ItemsGauge {
-		go ms.listRoutin(&list, fmt.Sprintf("%s: %f", n, v), wg)
-	}	
+		go ms.listRoutin(&list, fmt.Sprintf("%s: %f", n, v), &wg)
+	}
 	for n, ves := range ms.ItemsCounter {
 		var values string
 		for _, v := range ves {
@@ -80,7 +80,7 @@ func (ms *MemStorage) List() ([]string, error) {
 	return list, nil
 }
 
-func (ms *MemStorage) listRoutin(list *[]string, info string, wg sync.WaitGroup) {
+func (ms *MemStorage) listRoutin(list *[]string, info string, wg *sync.WaitGroup) {
 	ms.mu.Lock()
 	defer wg.Done()
 	defer ms.mu.Unlock()
