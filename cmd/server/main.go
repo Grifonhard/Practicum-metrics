@@ -36,8 +36,7 @@ func main() {
 
 	stor := storage.New()
 
-	r := gin.Default()
-	r.LoadHTMLGlob("templates/*")
+	r := initRouter()
 
 	r.POST("/update/:type/:name/:value", web.DataExtraction(), web.Update(stor))
 	r.GET("/value/:type/:name", web.DataExtraction(), web.Get(stor))
@@ -45,4 +44,10 @@ func main() {
 
 	fmt.Printf("Server start %s\n", *addr)
 	log.Fatal(r.Run(*addr))
+}
+
+func initRouter() *gin.Engine {
+	router := gin.Default()
+	router.LoadHTMLGlob("templates/*")
+	return router
 }
