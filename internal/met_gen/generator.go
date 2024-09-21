@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"math/rand"
 	"runtime"
+	"sync"
 )
 
 type MetricsGenerator interface {
@@ -14,6 +15,7 @@ type MetricsGenerator interface {
 type MetGen struct {
 	metricsGauge   map[string]float64 //метрики float64
 	metricsCounter map[string]int64   //метрики int64
+	mu sync.Mutex
 }
 
 func New() *MetGen {
@@ -24,6 +26,8 @@ func New() *MetGen {
 }
 
 func (mg *MetGen) Renew() error {
+	mg.mu.Lock()
+	defer mg.mu.Unlock()
 	var memStats runtime.MemStats
 	runtime.ReadMemStats(&memStats)
 
@@ -62,6 +66,8 @@ func (mg *MetGen) Renew() error {
 }
 
 func (mg *MetGen) Collect() (map[string]string, map[string]string, error) {
+	mg.mu.Lock()
+	defer mg.mu.Unlock()
 	gg := make(map[string]string)
 	cntr := make(map[string]string)
 	for k, v := range mg.metricsGauge {
