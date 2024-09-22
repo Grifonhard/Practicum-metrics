@@ -6,6 +6,7 @@ import (
 	"log"
 
 	"github.com/Grifonhard/Practicum-metrics/internal/storage"
+	"github.com/Grifonhard/Practicum-metrics/internal/logger"
 	web "github.com/Grifonhard/Practicum-metrics/internal/web_server"
 	"github.com/caarlos0/env/v10"
 	"github.com/gin-gonic/gin"
@@ -36,11 +37,16 @@ func main() {
 
 	stor := storage.New()
 
+	err = logger.Init()
+	if err != nil {
+		log.Fatal(err)
+	}
+
 	r := initRouter()
 
-	r.POST("/update/:type/:name/:value", web.DataExtraction(), web.Update(stor))
-	r.GET("/value/:type/:name", web.DataExtraction(), web.Get(stor))
-	r.GET("/", web.List(stor))
+	r.POST("/update/:type/:name/:value", web.ReqRespLogger(), web.DataExtraction(), web.Update(stor))
+	r.GET("/value/:type/:name", web.ReqRespLogger(), web.DataExtraction(), web.Get(stor))
+	r.GET("/", web.ReqRespLogger(), web.List(stor))
 
 	fmt.Printf("Server start %s\n", *addr)
 	log.Fatal(r.Run(*addr))
