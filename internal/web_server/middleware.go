@@ -57,6 +57,6 @@ func ReqRespLogger() gin.HandlerFunc {
 			"lead time ms": duration.Milliseconds(),
 			"status":       lw.respInfo.status,
 			"size":         lw.respInfo.size,
-		})
+		}).Info()
 	}
 }
