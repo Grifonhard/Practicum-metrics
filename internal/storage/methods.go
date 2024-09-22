@@ -62,28 +62,38 @@ func (ms *MemStorage) Get(metric *Metric) (string, error) {
 func (ms *MemStorage) List() ([]string, error) {
 	list := make([]string, len(ms.ItemsCounter)+len(ms.ItemsCounter))
 	var wg sync.WaitGroup
-	wg.Add(len(ms.ItemsGauge))
+	wg.Add(2)
+	go ms.listGauge(&list, &wg)
+	go ms.listCounter(&list, &wg)
+
+	wg.Wait()
+
+	return list, nil
+}
+
+func (ms *MemStorage) listGauge(list *[]string, wg *sync.WaitGroup) {
+	defer wg.Done()
+	var i int
 	for n, v := range ms.ItemsGauge {
-		go ms.listRoutin(&list, fmt.Sprintf("%s: %f", n, v), &wg)
+		ms.mu.Lock()
+		(*list)[i] = fmt.Sprintf("%s: %f", n, v)
+		ms.mu.Unlock()
+		i++
 	}
+}
+
+func (ms *MemStorage) listCounter(list *[]string, wg *sync.WaitGroup) {
+	defer wg.Done()
+	i := len(ms.ItemsGauge)
 	for n, ves := range ms.ItemsCounter {
 		var values string
 		for _, v := range ves {
 			values = fmt.Sprintf("%s, %s", values, fmt.Sprintf("%f", v))
 		}
 		values, _ = strings.CutPrefix(values, ", ")
-		wg.Wait()
-		list = append(list, fmt.Sprintf("%s: %s", n, values))
+		(*list)[i] = fmt.Sprintf("%s: %s", n, values)
+		i++
 	}
-
-	return list, nil
-}
-
-func (ms *MemStorage) listRoutin(list *[]string, info string, wg *sync.WaitGroup) {
-	ms.mu.Lock()
-	defer wg.Done()
-	defer ms.mu.Unlock()
-	(*list) = append((*list), info)
 }
 
 func ValidateAndConvert(method, mType, mName, mValue string) (*Metric, error) {
