@@ -38,7 +38,9 @@ func main() {
 	stor := storage.New()
 
 	err = logger.Init()
-	log.Fatal(err)
+	if err != nil {
+		log.Fatal(err)
+	}
 
 	r := initRouter()
 

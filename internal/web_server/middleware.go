@@ -20,6 +20,17 @@ type loggingResponseWriter struct {
 	respInfo *respInfo
 }
 
+func (lw *loggingResponseWriter) Write(data []byte) (int, error) {
+	size, err := lw.ResponseWriter.Write(data)
+	lw.respInfo.size = size
+	return size, err
+}
+
+func (lw *loggingResponseWriter) WriteHeader(statusCode int) {
+	lw.respInfo.status = statusCode
+	lw.ResponseWriter.WriteHeader(statusCode)
+}
+
 func DataExtraction() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		item, err := storage.ValidateAndConvert(c.Request.Method, c.Param("type"), c.Param("name"), c.Param("value"))
