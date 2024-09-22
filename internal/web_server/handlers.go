@@ -14,21 +14,6 @@ const (
 	METRICKEY    = "metric"
 )
 
-func DataExtraction() gin.HandlerFunc {
-	return func(c *gin.Context) {
-		item, err := storage.ValidateAndConvert(c.Request.Method, c.Param("type"), c.Param("name"), c.Param("value"))
-		if err != nil {
-			c.String(http.StatusBadRequest, err.Error())
-			c.Abort()
-			return
-		}
-
-		c.Set(METRICKEY, item)
-
-		c.Next()
-	}
-}
-
 func Update(stor *storage.MemStorage) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		//извлекаем данные из контекста
