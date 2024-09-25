@@ -2,10 +2,10 @@ package webserver
 
 import (
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/Grifonhard/Practicum-metrics/internal/logger"
-	"github.com/Grifonhard/Practicum-metrics/internal/storage"
 	"github.com/gin-gonic/gin"
 	"github.com/sirupsen/logrus"
 )
@@ -33,16 +33,16 @@ func (lw *loggingResponseWriter) WriteHeader(statusCode int) {
 
 func DataExtraction() gin.HandlerFunc {
 	return func(c *gin.Context) {
-		item, err := storage.ValidateAndConvert(c.Request.Method, c.Param("type"), c.Param("name"), c.Param("value"))
-		if err != nil {
-			c.String(http.StatusBadRequest, err.Error())
-			c.Abort()
-			return
-		}
+		if c.Request.Method == http.MethodPost && strings.Contains(c.Request.URL.Path, "/update/") && c.Request.Header.Get("Content-Type") == "application/json" {
+			c.Set(METRICTYPE, METRICTYPEJSON)
 
-		c.Set(METRICKEY, item)
+			c.Next()
+		} else {
 
-		c.Next()
+			c.Set(METRICTYPE, METRICTYPEDEFAULT)
+
+			c.Next()
+		}		
 	}
 }
 
