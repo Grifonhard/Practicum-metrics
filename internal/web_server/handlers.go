@@ -13,19 +13,12 @@ import (
 )
 
 const (
-	PARAMSAMOUNT = 3
-	STORAGEKEY   = "storage"
-	METRICTYPE    = "metric_type"
-	METRICTYPEJSON = "json"
+	PARAMSAMOUNT      = 3
+	STORAGEKEY        = "storage"
+	METRICTYPE        = "metric_type"
+	METRICTYPEJSON    = "json"
 	METRICTYPEDEFAULT = "default"
 )
-
-type Metrics struct {
-	ID    string   `json:"id"`              // имя метрики
-	MType string   `json:"type"`            // параметр, принимающий значение gauge или counter
-	Delta *int64   `json:"delta,omitempty"` // значение метрики в случае передачи counter
-	Value *float64 `json:"value,omitempty"` // значение метрики в случае передачи gauge
- } 
 
 func Update(stor *storage.MemStorage) gin.HandlerFunc {
 	return func(c *gin.Context) {
@@ -62,64 +55,62 @@ func Update(stor *storage.MemStorage) gin.HandlerFunc {
 			var err error
 			dec := json.NewDecoder(c.Request.Body)
 			enc := json.NewEncoder(&buf)
-			var delta int64
+			var valueOld float64
 			for {
-				var item, renewItem Metrics
-				var valueStor float64
+				var item storage.Metric
 				err = dec.Decode(&item)
 				if err != nil && err != io.EOF {
-					c.String(http.StatusBadRequest, fmt.Sprintf("fail while decode json: %v", err))
+					c.String(http.StatusBadRequest, fmt.Sprintf("fail while decode json: %s", err.Error()))
 					c.Abort()
 					return
-				} else if err != nil && err == io.EOF{
+				} else if err != nil && err == io.EOF {
 					break
 				}
 
-				if item.MType == storage.TYPECOUNTER {
-					value, err := getAndConvert(stor, &item)
+				if item.Type == storage.TYPECOUNTER {
+					valueOld, err = getAndConvert(stor, &item)
 					if err != nil {
 						c.String(http.StatusInternalServerError, fmt.Sprintf("%v", err))
 						c.Abort()
 						return
 					}
-					delta = int64(value)
-					valueStor = float64(*item.Delta)
-				} else {
-					valueStor = *item.Value
 				}
 
-				err = stor.Push(&storage.Metric{
-					Name: item.ID,
-					Type: item.MType,
-
-				})
+				err = stor.Push(&item)
 				if err != nil {
 					c.String(http.StatusInternalServerError, fmt.Sprintf("fail while push error: %s", err.Error()))
 					c.Abort()
 					return
 				}
 
-				valueNew, err := getAndConvert(stor, &item)
+				renewValue, err := getAndConvert(stor, &item)
 				if err != nil {
 					c.String(http.StatusInternalServerError, fmt.Sprintf("%v", err))
 					c.Abort()
 					return
 				}
 
-				renewItem.ID = item.ID
-				renewItem.MType = item.MType
-
-				switch item.MType{
+				switch item.Type {
 				case storage.TYPECOUNTER:
-					delta = int64(valueNew) - delta
-					renewItem.Delta = &delta
+					item.Value = renewValue - valueOld
+					err = enc.Encode(item)
+					if err != nil {
+						c.String(http.StatusInternalServerError, fmt.Sprintf("%s", err.Error()))
+						c.Abort()
+						return
+					}
 				case storage.TYPEGAUGE:
-					renewItem.Value = &valueNew
+					item.Value = renewValue
+					err = enc.Encode(item)
+					if err != nil {
+						c.String(http.StatusInternalServerError, fmt.Sprintf("%s", err.Error()))
+						c.Abort()
+						return
+					}
 				}
-
-				err = enc.Encode()
 			}
-
+			c.Header("Сontent-Length", fmt.Sprint(buf.Len()))
+			c.Data(http.StatusOK, "application/json", buf.Bytes())
 		default:
 			c.String(http.StatusInternalServerError, "wrong metric type in context")
 			c.Abort()
@@ -137,7 +128,7 @@ func Get(stor *storage.MemStorage) gin.HandlerFunc {
 			return
 		}
 
-		switch mType{
+		switch mType {
 		case METRICTYPEDEFAULT:
 			item, err := storage.ValidateAndConvert(c.Request.Method, c.Param("type"), c.Param("name"), c.Param("value"))
 			if err != nil {
@@ -187,11 +178,8 @@ func List(stor *storage.MemStorage) gin.HandlerFunc {
 	}
 }
 
-func getAndConvert(stor *storage.MemStorage, metric *Metrics) (float64, error) {
-	var item storage.Metric
-	item.Name = metric.ID
-	item.Type = metric.MType
-	valueS, err := stor.Get(&item)
+func getAndConvert(stor *storage.MemStorage, metric *storage.Metric) (float64, error) {
+	valueS, err := stor.Get(metric)
 	if err != nil {
 		return 0, fmt.Errorf("fail while get error: %v", err)
 	}

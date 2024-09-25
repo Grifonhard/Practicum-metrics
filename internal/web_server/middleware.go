@@ -42,7 +42,7 @@ func DataExtraction() gin.HandlerFunc {
 			c.Set(METRICTYPE, METRICTYPEDEFAULT)
 
 			c.Next()
-		}		
+		}
 	}
 }
 
