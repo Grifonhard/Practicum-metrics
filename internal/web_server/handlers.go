@@ -118,6 +118,41 @@ func Update(stor *storage.MemStorage) gin.HandlerFunc {
 	}
 }
 
+func GetJSON(stor *storage.MemStorage) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		if c.Request.Header.Get("Content-Type") != "application/json" {
+			c.String(http.StatusBadRequest, "wrong content type, only json allow")
+			c.Abort()
+			return
+		}
+
+		//для разнообразия принимаем только по одной штуке
+		var item storage.Metric
+		
+		if err := c.ShouldBindJSON(&item); err != nil {
+			c.String(http.StatusBadRequest, err.Error())
+			c.Abort()
+			return
+		}
+
+		value, err := stor.Get(&item)
+		if err != nil && err == storage.ErrMetricNoData{
+			c.String(http.StatusBadRequest, err.Error())
+			c.Abort()
+			return
+		} else if err != nil {
+			c.String(http.StatusInternalServerError, err.Error())
+			c.Abort()
+			return
+		}
+
+		item.Value = value
+
+		c.Header("Сontent-Type", "application/json")
+		c.JSON(http.StatusOK, item)
+	}
+}
+
 func Get(stor *storage.MemStorage) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		mType, ok := c.Get(METRICTYPE)
