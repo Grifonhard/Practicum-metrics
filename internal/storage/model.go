@@ -56,15 +56,15 @@ func (m *Metric) MarshalJSON() ([]byte, error) {
 func (m *Metric) UnmarshalJSON(data []byte) error {
 	mAlias := *m
 	apiMetric := struct {
-		mtrc *Metric
+		Mtrc *Metric
 		V    *float64 `json:"value,omitempty"`
 		D    *int64   `json:"delta,omitempty"`
-	}{mtrc: &mAlias}
+	}{Mtrc: &mAlias}
 	if err := json.Unmarshal(data, &apiMetric); err != nil {
 		return err
 	}
 	*m = mAlias
-	switch apiMetric.mtrc.Type {
+	switch apiMetric.Mtrc.Type {
 	case TYPEGAUGE:
 		if apiMetric.V == nil {
 			return nil
