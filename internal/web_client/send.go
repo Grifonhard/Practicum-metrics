@@ -5,7 +5,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"log"
 	"net/http"
 	"sync"
 	"time"
@@ -54,9 +53,6 @@ func SendMetric(url string, gen *metgen.MetGen) {
 			cl := &http.Client{}
 			cl.Timeout = time.Minute
 
-			if err != nil {
-				log.Fatal(err)
-			}
 			resp, err := cl.Do(req)
 			if err != nil {
 				fmt.Printf("Fail while sending metrics: %s", err.Error())
