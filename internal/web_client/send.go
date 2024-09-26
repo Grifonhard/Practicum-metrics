@@ -25,16 +25,6 @@ func SendMetric(url string, gen *metgen.MetGen) {
 	ctx, cancel := context.WithCancel(context.Background())
 	ch := make(chan *Metrics)
 
-	//подготовка реквеста и клиента
-	req, err := http.NewRequest(http.MethodPost, url, nil)
-	if err != nil {
-		fmt.Printf("fail while create request: %s", err.Error())
-		return
-	}
-	req.Header.Set("Content-Type", "application/json")
-	cl := &http.Client{}
-	cl.Timeout = time.Minute
-
 	//подготовка данных
 	var buf bytes.Buffer
 	gauge, counter, err := gen.Collect()
@@ -42,6 +32,16 @@ func SendMetric(url string, gen *metgen.MetGen) {
 		fmt.Printf("fail collect metrics: %s", err.Error())
 	}
 	enc := json.NewEncoder(&buf)
+
+	//подготовка реквеста и клиента
+	req, err := http.NewRequest(http.MethodPost, url, &buf)
+	if err != nil {
+		fmt.Printf("fail while create request: %s", err.Error())
+		return
+	}
+	req.Header.Set("Content-Type", "application/json")
+	cl := &http.Client{}
+	cl.Timeout = time.Minute
 
 	go prepareDataToSend(gauge, counter, ch, cancel)
 	for {
@@ -52,7 +52,7 @@ func SendMetric(url string, gen *metgen.MetGen) {
 				fmt.Printf("fail encode metrics: %s", err.Error())
 			}
 		case <-ctx.Done():
-			_, err = req.Body.Read(buf.Bytes())
+			close(ch)
 			if err != nil {
 				log.Fatal(err)
 			}
@@ -63,7 +63,7 @@ func SendMetric(url string, gen *metgen.MetGen) {
 			}
 			defer resp.Body.Close()
 
-			fmt.Println("success send")
+			fmt.Printf("success send, status: %s\n", resp.Status)
 			return
 		}
 	}
@@ -85,16 +85,16 @@ func prepareDataToSend(g map[string]float64, c map[string]int64, ch chan *Metric
 	}()
 
 	go func() {
+		defer wg.Done()
 		for k, v := range c {
-			defer wg.Done()
 			var metric Metrics
 			metric.ID = k
-			metric.MType = storage.TYPEGAUGE
+			metric.MType = storage.TYPECOUNTER
 			dlt := v
 			metric.Delta = &dlt
 			ch <- &metric
 		}
 	}()
-	wg.Wait()
+	wg.Wait()	
 	cancel()
 }
