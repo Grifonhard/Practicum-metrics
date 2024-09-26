@@ -33,7 +33,7 @@ func (lw *loggingResponseWriter) WriteHeader(statusCode int) {
 
 func DataExtraction() gin.HandlerFunc {
 	return func(c *gin.Context) {
-		if c.Request.Method == http.MethodPost && strings.Contains(c.Request.URL.Path, "/update/") && c.Request.Header.Get("Content-Type") == "application/json" {
+		if c.Request.Method == http.MethodPost && strings.Contains(c.Request.URL.Path, "/update") && c.Request.Header.Get("Content-Type") == "application/json" {
 			c.Set(METRICTYPE, METRICTYPEJSON)
 
 			c.Next()
