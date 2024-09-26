@@ -55,7 +55,6 @@ func Update(stor *storage.MemStorage) gin.HandlerFunc {
 			var err error
 			dec := json.NewDecoder(c.Request.Body)
 			enc := json.NewEncoder(&buf)
-			var valueOld float64
 			for {
 				var item storage.Metric
 				err = dec.Decode(&item)
@@ -67,16 +66,6 @@ func Update(stor *storage.MemStorage) gin.HandlerFunc {
                     c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 					c.Abort()
 					return
-				}
-
-				if item.Type == storage.TYPECOUNTER {
-					valueOld, err = stor.Get(&item)
-					if err != nil && err != storage.ErrMetricNoData {
-						c.Header("Content-Type", "application/json; charset=utf-8")
-                   		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-						c.Abort()
-						return
-					}
 				}
 
 				err = stor.Push(&item)
@@ -95,25 +84,13 @@ func Update(stor *storage.MemStorage) gin.HandlerFunc {
 					return
 				}
 
-				switch item.Type {
-				case storage.TYPECOUNTER:
-					item.Value = renewValue - valueOld
-					err = enc.Encode(&item)
-					if err != nil {
-						c.Header("Content-Type", "application/json; charset=utf-8")
-                    	c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-						c.Abort()
-						return
-					}
-				case storage.TYPEGAUGE:
-					item.Value = renewValue
-					err = enc.Encode(&item)
-					if err != nil {
-						c.Header("Content-Type", "application/json; charset=utf-8")
-                    	c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-						c.Abort()
-						return
-					}
+				item.Value = renewValue
+				err = enc.Encode(&item)
+				if err != nil {
+					c.Header("Content-Type", "application/json; charset=utf-8")
+                   	c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+					c.Abort()
+					return
 				}
 			}
 			c.Header("Content-Length", fmt.Sprint(buf.Len()))
