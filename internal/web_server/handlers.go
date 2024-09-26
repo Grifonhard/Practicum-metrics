@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"io"
 	"net/http"
-	"strconv"
 
 	"github.com/Grifonhard/Practicum-metrics/internal/storage"
 	"github.com/gin-gonic/gin"
@@ -68,7 +67,7 @@ func Update(stor *storage.MemStorage) gin.HandlerFunc {
 				}
 
 				if item.Type == storage.TYPECOUNTER {
-					valueOld, err = getAndConvert(stor, &item)
+					valueOld, err = stor.Get(&item)
 					if err != nil {
 						c.String(http.StatusInternalServerError, fmt.Sprintf("%v", err))
 						c.Abort()
@@ -83,7 +82,7 @@ func Update(stor *storage.MemStorage) gin.HandlerFunc {
 					return
 				}
 
-				renewValue, err := getAndConvert(stor, &item)
+				renewValue, err := stor.Get(&item)
 				if err != nil {
 					c.String(http.StatusInternalServerError, fmt.Sprintf("%v", err))
 					c.Abort()
@@ -149,10 +148,10 @@ func Get(stor *storage.MemStorage) gin.HandlerFunc {
 				return
 			}
 
-			c.Header("Сontent-Length", fmt.Sprint(len(value)))
+			c.Header("Сontent-Length", fmt.Sprint(len(fmt.Sprint(value))))
 			c.Header("Content-Type", "text/plain; charset=utf-8")
 
-			c.String(http.StatusOK, value)
+			c.String(http.StatusOK, fmt.Sprint(value))
 			return
 		default:
 			c.String(http.StatusInternalServerError, "wrong metric type in context")
@@ -176,16 +175,4 @@ func List(stor *storage.MemStorage) gin.HandlerFunc {
 			"Items": list,
 		})
 	}
-}
-
-func getAndConvert(stor *storage.MemStorage, metric *storage.Metric) (float64, error) {
-	valueS, err := stor.Get(metric)
-	if err != nil {
-		return 0, fmt.Errorf("fail while get error: %v", err)
-	}
-	fl, err := strconv.ParseFloat(valueS, 64)
-	if err != nil {
-		return 0, fmt.Errorf("fail while convert to float error: %v", err)
-	}
-	return fl, nil
 }
