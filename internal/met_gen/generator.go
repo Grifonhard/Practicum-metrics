@@ -1,7 +1,6 @@
 package metgen
 
 import (
-	"fmt"
 	"math/rand"
 	"runtime"
 	"sync"
@@ -65,16 +64,16 @@ func (mg *MetGen) Renew() error {
 	return nil
 }
 
-func (mg *MetGen) Collect() (map[string]string, map[string]string, error) {
+func (mg *MetGen) Collect() (map[string]float64, map[string]int64, error) {
 	mg.mu.Lock()
 	defer mg.mu.Unlock()
-	gg := make(map[string]string)
-	cntr := make(map[string]string)
+	gg := make(map[string]float64)
+	cntr := make(map[string]int64)
 	for k, v := range mg.metricsGauge {
-		gg[k] = fmt.Sprint(v)
+		gg[k] = v
 	}
 	for k, v := range mg.metricsCounter {
-		cntr[k] = fmt.Sprint(v)
+		cntr[k] = v
 	}
 	return gg, cntr, nil
 }
