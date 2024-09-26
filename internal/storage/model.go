@@ -42,10 +42,10 @@ func (m *Metric) MarshalJSON() ([]byte, error) {
 	case TYPECOUNTER:
 		dlt := int64(m.Value)
 		return json.Marshal(struct {
-			Mtrc *Metric
+			*MAlias
 			D    *int64 `json:"delta,omitempty"`
 		}{
-			Mtrc: m,
+			MAlias: (*MAlias)(m),
 			D:    &dlt,
 		})
 	default:
