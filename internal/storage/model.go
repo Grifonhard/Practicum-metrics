@@ -22,8 +22,8 @@ type MemStorage struct {
 }
 
 type Metric struct {
-	Type  string `json:"id"`
-	Name  string `json:"type"`
+	Type  string `json:"type"`
+	Name  string `json:"id"`
 	Value float64 `json:"-"`
 }
 
