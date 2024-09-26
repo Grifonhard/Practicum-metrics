@@ -158,8 +158,9 @@ func GetJSON(stor *storage.MemStorage) gin.HandlerFunc {
 			return
 		}
 
+		fmt.Sprintf("metric: %s, type: %s\n", item.Name, item.Type)
 		value, err := stor.Get(&item)
-		if err != nil && err != storage.ErrMetricNoData {
+		if err != nil && err == storage.ErrMetricNoData {
 			c.Header("Content-Type", "application/json; charset=utf-8")
 			response := gin.H{"error": err.Error()}
 			fmt.Println("Response Headers:", c.Writer.Header())
