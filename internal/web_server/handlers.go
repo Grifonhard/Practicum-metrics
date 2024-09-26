@@ -148,7 +148,7 @@ func GetJSON(stor *storage.MemStorage) gin.HandlerFunc {
 
 		item.Value = value
 
-		c.Header("Сontent-Type", "application/json")
+		c.Header("Content-Type", "application/json")
 		c.JSON(http.StatusOK, item)
 	}
 }
