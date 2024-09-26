@@ -28,15 +28,15 @@ type Metric struct {
 }
 
 func (m *Metric) MarshalJSON() ([]byte, error) {
-	mAlias := *m
+	type MAlias Metric
 	switch m.Type {
 	case TYPEGAUGE:
 		value := m.Value
 		return json.Marshal(struct {
-			Mtrc *Metric
+			*MAlias
 			V    *float64 `json:"value,omitempty"`
 		}{
-			Mtrc: &mAlias,
+			MAlias: (*MAlias)(m),
 			V:    &value,
 		})
 	case TYPECOUNTER:
@@ -54,17 +54,16 @@ func (m *Metric) MarshalJSON() ([]byte, error) {
 }
 
 func (m *Metric) UnmarshalJSON(data []byte) error {
-	mAlias := *m
+	type MAlias Metric
 	apiMetric := struct {
-		Mtrc *Metric
+		*MAlias
 		V    *float64 `json:"value,omitempty"`
 		D    *int64   `json:"delta,omitempty"`
-	}{Mtrc: &mAlias}
+	}{MAlias: (*MAlias)(m)}
 	if err := json.Unmarshal(data, &apiMetric); err != nil {
 		return err
 	}
-	*m = mAlias
-	switch apiMetric.Mtrc.Type {
+	switch m.Type {
 	case TYPEGAUGE:
 		if apiMetric.V == nil {
 			return nil

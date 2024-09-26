@@ -97,7 +97,7 @@ func Update(stor *storage.MemStorage) gin.HandlerFunc {
 				switch item.Type {
 				case storage.TYPECOUNTER:
 					item.Value = renewValue - valueOld
-					err = enc.Encode(item)
+					err = enc.Encode(&item)
 					if err != nil {
 						c.Header("Content-Type", "application/json; charset=utf-8")
                     	c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
@@ -106,7 +106,7 @@ func Update(stor *storage.MemStorage) gin.HandlerFunc {
 					}
 				case storage.TYPEGAUGE:
 					item.Value = renewValue
-					err = enc.Encode(item)
+					err = enc.Encode(&item)
 					if err != nil {
 						c.Header("Content-Type", "application/json; charset=utf-8")
                     	c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
@@ -127,20 +127,9 @@ func Update(stor *storage.MemStorage) gin.HandlerFunc {
 
 func GetJSON(stor *storage.MemStorage) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		// Логируем заголовки и тело запроса
-		fmt.Println("Request Headers:", c.Request.Header)
-		body, _ := io.ReadAll(c.Request.Body)
-		fmt.Println("Request Body:", string(body))
-
-		// Восстанавливаем тело запроса после его чтения, чтобы не нарушить работу
-		c.Request.Body = io.NopCloser(bytes.NewBuffer(body))
-
 		if !strings.Contains(c.Request.Header.Get("Content-Type"), "application/json") {
 			c.Header("Content-Type", "application/json; charset=utf-8")
-			response := gin.H{"error": "wrong content type, only json allow"}
-			fmt.Println("Response Headers:", c.Writer.Header())
-			fmt.Println("Response Body:", response)
-			c.JSON(http.StatusBadRequest, response)
+			c.JSON(http.StatusBadRequest, gin.H{"error": "wrong content type, only json allow"})
 			c.Abort()
 			return
 		}
@@ -150,10 +139,7 @@ func GetJSON(stor *storage.MemStorage) gin.HandlerFunc {
 
 		if err := c.ShouldBindJSON(&item); err != nil {
 			c.Header("Content-Type", "application/json; charset=utf-8")
-			response := gin.H{"error": err.Error()}
-			fmt.Println("Response Headers:", c.Writer.Header())
-			fmt.Println("Response Body:", response)
-			c.JSON(http.StatusBadRequest, response)
+			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 			c.Abort()
 			return
 		}
@@ -162,18 +148,12 @@ func GetJSON(stor *storage.MemStorage) gin.HandlerFunc {
 		value, err := stor.Get(&item)
 		if err != nil && err == storage.ErrMetricNoData {
 			c.Header("Content-Type", "application/json; charset=utf-8")
-			response := gin.H{"error": err.Error()}
-			fmt.Println("Response Headers:", c.Writer.Header())
-			fmt.Println("Response Body:", response)
-			c.JSON(http.StatusNotFound, response)
+			c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
 			c.Abort()
 			return
 		} else if err != nil {
 			c.Header("Content-Type", "application/json; charset=utf-8")
-			response := gin.H{"error": err.Error()}
-			fmt.Println("Response Headers:", c.Writer.Header())
-			fmt.Println("Response Body:", response)
-			c.JSON(http.StatusInternalServerError, response)
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 			c.Abort()
 			return
 		}
@@ -182,8 +162,6 @@ func GetJSON(stor *storage.MemStorage) gin.HandlerFunc {
 
 		// Логируем заголовки и тело ответа
 		c.Header("Content-Type", "application/json; charset=utf-8")
-		fmt.Println("Response Headers:", c.Writer.Header())
-		fmt.Println("Response Body:", item)
 		c.JSON(http.StatusOK, item)
 	}
 }
