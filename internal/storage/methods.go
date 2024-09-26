@@ -33,29 +33,29 @@ func (ms *MemStorage) Push(metric *Metric) error {
 	}
 }
 
-func (ms *MemStorage) Get(metric *Metric) (string, error) {
+func (ms *MemStorage) Get(metric *Metric) (float64, error) {
 	if metric == nil {
-		return "", ErrMetricEmpty
+		return 0, ErrMetricEmpty
 	}
 	switch metric.Type {
 	case TYPEGAUGE:
 		result, ok := ms.ItemsGauge[metric.Name]
 		if !ok {
-			return "", ErrMetricNoData
+			return 0, ErrMetricNoData
 		}
-		return fmt.Sprint(result), nil
+		return result, nil
 	case TYPECOUNTER:
 		values, ok := ms.ItemsCounter[metric.Name]
 		if !ok {
-			return "", ErrMetricNoData
+			return 0, ErrMetricNoData
 		}
 		var result float64
 		for _, v := range values {
 			result += v
 		}
-		return fmt.Sprint(result), nil
+		return result, nil
 	default:
-		return "", ErrMetricTypeUnknown
+		return 0, ErrMetricTypeUnknown
 	}
 }
 

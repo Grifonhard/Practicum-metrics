@@ -1,11 +1,14 @@
 package webserver
 
 import (
+	"bytes"
 	"fmt"
+	"log"
 	"net/http"
 	"net/http/httptest"
 	"testing"
 
+	"github.com/Grifonhard/Practicum-metrics/internal/logger"
 	"github.com/Grifonhard/Practicum-metrics/internal/storage"
 	"github.com/gin-gonic/gin"
 	"github.com/stretchr/testify/assert"
@@ -74,4 +77,37 @@ func TestPost(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestGetJSON(t *testing.T) {
+	//подготовка
+	stor := storage.New()
+	stor.ItemsCounter = map[string][]float64{
+		"testcounter": {1.11, 2.22},
+	}
+	stor.ItemsGauge = map[string]float64{
+		"testgauge": 3.33,
+	}
+
+	err := logger.Init()
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	getJSONPath := "/value/"
+
+	router := gin.Default()
+
+	router.POST("/value/", ReqRespLogger(), GetJSON(stor))
+
+	buf := bytes.NewBuffer([]byte(`{"id":"testgauge","type":"gauge"}`))
+
+	r := httptest.NewRequest(http.MethodPost, getJSONPath, buf)
+	r.Header.Set("Content-Type", "application/json")
+
+	w := httptest.NewRecorder()
+
+	router.ServeHTTP(w, r)
+
+	fmt.Println(w.Body.String())
 }
