@@ -78,6 +78,8 @@ func Update(stor *storage.MemStorage) gin.HandlerFunc {
 					}
 				}
 
+				fmt.Printf("income: %v\n", item)
+
 				err = stor.Push(&item)
 				if err != nil {
 					c.Header("Content-Type", "application/json; charset=utf-8")
@@ -97,6 +99,7 @@ func Update(stor *storage.MemStorage) gin.HandlerFunc {
 				switch item.Type {
 				case storage.TYPECOUNTER:
 					item.Value = renewValue - valueOld
+					fmt.Printf("outcome: %v\n", item)
 					err = enc.Encode(&item)
 					if err != nil {
 						c.Header("Content-Type", "application/json; charset=utf-8")
@@ -106,6 +109,7 @@ func Update(stor *storage.MemStorage) gin.HandlerFunc {
 					}
 				case storage.TYPEGAUGE:
 					item.Value = renewValue
+					fmt.Printf("outcome: %v\n", item)
 					err = enc.Encode(&item)
 					if err != nil {
 						c.Header("Content-Type", "application/json; charset=utf-8")
