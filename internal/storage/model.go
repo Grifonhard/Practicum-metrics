@@ -24,10 +24,11 @@ type MemStorage struct {
 type Metric struct {
 	Type  string `json:"id"`
 	Name  string `json:"type"`
-	Value float64
+	Value float64 `json:"-"`
 }
 
 func (m *Metric) MarshalJSON() ([]byte, error) {
+	mAlias := *m
 	switch m.Type {
 	case TYPEGAUGE:
 		value := m.Value
@@ -35,7 +36,7 @@ func (m *Metric) MarshalJSON() ([]byte, error) {
 			Mtrc *Metric
 			V    *float64 `json:"value,omitempty"`
 		}{
-			Mtrc: m,
+			Mtrc: &mAlias,
 			V:    &value,
 		})
 	case TYPECOUNTER:
@@ -53,19 +54,26 @@ func (m *Metric) MarshalJSON() ([]byte, error) {
 }
 
 func (m *Metric) UnmarshalJSON(data []byte) error {
+	mAlias := *m
 	apiMetric := struct {
 		mtrc *Metric
 		V    *float64 `json:"value,omitempty"`
 		D    *int64   `json:"delta,omitempty"`
-	}{}
+	}{mtrc: &mAlias}
 	if err := json.Unmarshal(data, &apiMetric); err != nil {
 		return err
 	}
-	*m = *apiMetric.mtrc
+	*m = mAlias
 	switch apiMetric.mtrc.Type {
 	case TYPEGAUGE:
+		if apiMetric.V == nil {
+			return nil
+		}
 		m.Value = *apiMetric.V
 	case TYPECOUNTER:
+		if apiMetric.D == nil {
+			return nil
+		}
 		m.Value = float64(*apiMetric.D)
 	default:
 		return ErrMetricTypeUnknown
