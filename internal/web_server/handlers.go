@@ -54,21 +54,6 @@ func Update(stor *storage.MemStorage) gin.HandlerFunc {
 			var buf bytes.Buffer
 			var err error
 			dec := json.NewDecoder(c.Request.Body)
-			bodyBytes, err := io.ReadAll(c.Request.Body)
-
-			if err != nil {
-				c.String(http.StatusInternalServerError, "failed to read request body")
-				c.Abort()
-				return
-			}
-
-			// Восстанавливаем тело запроса после чтения
-			c.Request.Body = io.NopCloser(bytes.NewBuffer(bodyBytes))
-
-			// Выводим содержимое тела
-			fmt.Printf("Request Body: %s\n", string(bodyBytes))
-
-			
 			enc := json.NewEncoder(&buf)
 			var valueOld float64
 			for {
@@ -160,7 +145,6 @@ func GetJSON(stor *storage.MemStorage) gin.HandlerFunc {
 			return
 		}
 
-		fmt.Printf("metric: %s, type: %s\n", item.Name, item.Type)
 		value, err := stor.Get(&item)
 		if err != nil && err == storage.ErrMetricNoData {
 			c.Header("Content-Type", "application/json; charset=utf-8")

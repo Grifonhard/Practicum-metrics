@@ -31,18 +31,7 @@ func SendMetric(url string, gen *metgen.MetGen) {
 	if err != nil {
 		fmt.Printf("fail collect metrics: %s", err.Error())
 	}
-	enc := json.NewEncoder(&buf)
-
-	//подготовка реквеста и клиента
-	req, err := http.NewRequest(http.MethodPost, url, &buf)
-	if err != nil {
-		fmt.Printf("fail while create request: %s", err.Error())
-		cancel()
-		return
-	}
-	req.Header.Set("Content-Type", "application/json")
-	cl := &http.Client{}
-	cl.Timeout = time.Minute
+	enc := json.NewEncoder(&buf)	
 
 	go prepareDataToSend(gauge, counter, ch, cancel)
 	for {
@@ -54,6 +43,17 @@ func SendMetric(url string, gen *metgen.MetGen) {
 			}
 		case <-ctx.Done():
 			close(ch)
+			//подготовка реквеста и клиента
+			req, err := http.NewRequest(http.MethodPost, url, &buf)
+			if err != nil {
+				fmt.Printf("fail while create request: %s", err.Error())
+				cancel()
+				return
+			}
+			req.Header.Set("Content-Type", "application/json")
+			cl := &http.Client{}
+			cl.Timeout = time.Minute
+
 			if err != nil {
 				log.Fatal(err)
 			}
