@@ -139,7 +139,7 @@ func GetJSON(stor *storage.MemStorage) gin.HandlerFunc {
 
 		// Логируем заголовки и тело ответа
 		c.Header("Content-Type", "application/json; charset=utf-8")
-		c.JSON(http.StatusOK, item)
+		c.JSON(http.StatusOK, &item)
 	}
 }
 
