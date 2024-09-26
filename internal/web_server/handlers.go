@@ -68,7 +68,7 @@ func Update(stor *storage.MemStorage) gin.HandlerFunc {
 
 				if item.Type == storage.TYPECOUNTER {
 					valueOld, err = stor.Get(&item)
-					if err != nil {
+					if err != nil && err != storage.ErrMetricNoData {
 						c.String(http.StatusInternalServerError, fmt.Sprintf("%v", err))
 						c.Abort()
 						return
@@ -137,6 +137,10 @@ func GetJSON(stor *storage.MemStorage) gin.HandlerFunc {
 
 		value, err := stor.Get(&item)
 		if err != nil && err != storage.ErrMetricNoData{
+			c.String(http.StatusNotFound, err.Error())
+			c.Abort()
+			return
+		} else if err != nil {
 			c.String(http.StatusInternalServerError, err.Error())
 			c.Abort()
 			return
