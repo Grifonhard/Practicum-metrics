@@ -180,9 +180,9 @@ func GetJSON(stor *storage.MemStorage) gin.HandlerFunc {
 		item.Value = value
 
 		// Логируем заголовки и тело ответа
+		c.Header("Content-Type", "application/json; charset=utf-8")
 		fmt.Println("Response Headers:", c.Writer.Header())
 		fmt.Println("Response Body:", item)
-		c.Header("Content-Type", "application/json; charset=utf-8")
 		c.JSON(http.StatusOK, item)
 	}
 }
