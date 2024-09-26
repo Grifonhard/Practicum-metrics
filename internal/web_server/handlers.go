@@ -95,7 +95,7 @@ func Update(stor *storage.MemStorage) gin.HandlerFunc {
 					item.Value = renewValue - valueOld
 					err = enc.Encode(item)
 					if err != nil {
-						c.String(http.StatusInternalServerError, fmt.Sprintf("%s", err.Error()))
+						c.String(http.StatusInternalServerError, err.Error())
 						c.Abort()
 						return
 					}
@@ -103,7 +103,7 @@ func Update(stor *storage.MemStorage) gin.HandlerFunc {
 					item.Value = renewValue
 					err = enc.Encode(item)
 					if err != nil {
-						c.String(http.StatusInternalServerError, fmt.Sprintf("%s", err.Error()))
+						c.String(http.StatusInternalServerError, err.Error())
 						c.Abort()
 						return
 					}

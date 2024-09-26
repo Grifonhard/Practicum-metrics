@@ -37,6 +37,7 @@ func SendMetric(url string, gen *metgen.MetGen) {
 	req, err := http.NewRequest(http.MethodPost, url, &buf)
 	if err != nil {
 		fmt.Printf("fail while create request: %s", err.Error())
+		cancel()
 		return
 	}
 	req.Header.Set("Content-Type", "application/json")
