@@ -127,38 +127,61 @@ func Update(stor *storage.MemStorage) gin.HandlerFunc {
 
 func GetJSON(stor *storage.MemStorage) gin.HandlerFunc {
 	return func(c *gin.Context) {
+		// Логируем заголовки и тело запроса
+		fmt.Println("Request Headers:", c.Request.Header)
+		body, _ := io.ReadAll(c.Request.Body)
+		fmt.Println("Request Body:", string(body))
+
+		// Восстанавливаем тело запроса после его чтения, чтобы не нарушить работу
+		c.Request.Body = io.NopCloser(bytes.NewBuffer(body))
+
 		if !strings.Contains(c.Request.Header.Get("Content-Type"), "application/json") {
 			c.Header("Content-Type", "application/json; charset=utf-8")
-			c.JSON(http.StatusBadRequest, gin.H{"error": "wrong content type, only json allow"})
+			response := gin.H{"error": "wrong content type, only json allow"}
+			fmt.Println("Response Headers:", c.Writer.Header())
+			fmt.Println("Response Body:", response)
+			c.JSON(http.StatusBadRequest, response)
 			c.Abort()
 			return
 		}
 
-		//для разнообразия принимаем только по одной штуке
+		// Для разнообразия принимаем только по одной штуке
 		var item storage.Metric
-		
+
 		if err := c.ShouldBindJSON(&item); err != nil {
 			c.Header("Content-Type", "application/json; charset=utf-8")
-			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+			response := gin.H{"error": err.Error()}
+			fmt.Println("Response Headers:", c.Writer.Header())
+			fmt.Println("Response Body:", response)
+			c.JSON(http.StatusBadRequest, response)
 			c.Abort()
 			return
 		}
 
 		value, err := stor.Get(&item)
-		if err != nil && err != storage.ErrMetricNoData{
+		if err != nil && err != storage.ErrMetricNoData {
 			c.Header("Content-Type", "application/json; charset=utf-8")
-			c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
+			response := gin.H{"error": err.Error()}
+			fmt.Println("Response Headers:", c.Writer.Header())
+			fmt.Println("Response Body:", response)
+			c.JSON(http.StatusNotFound, response)
 			c.Abort()
 			return
 		} else if err != nil {
 			c.Header("Content-Type", "application/json; charset=utf-8")
-            c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			response := gin.H{"error": err.Error()}
+			fmt.Println("Response Headers:", c.Writer.Header())
+			fmt.Println("Response Body:", response)
+			c.JSON(http.StatusInternalServerError, response)
 			c.Abort()
 			return
 		}
 
 		item.Value = value
 
+		// Логируем заголовки и тело ответа
+		fmt.Println("Response Headers:", c.Writer.Header())
+		fmt.Println("Response Body:", item)
 		c.Header("Content-Type", "application/json; charset=utf-8")
 		c.JSON(http.StatusOK, item)
 	}
