@@ -45,7 +45,7 @@ func Update(stor *storage.MemStorage) gin.HandlerFunc {
 				c.Abort()
 				return
 			}
-			c.Header("Сontent-Length", fmt.Sprint(len("success")))
+			c.Header("Content-Length", fmt.Sprint(len("success")))
 			c.Header("Content-Type", "text/plain; charset=utf-8")
 
 			c.String(http.StatusOK, "success")
@@ -54,18 +54,34 @@ func Update(stor *storage.MemStorage) gin.HandlerFunc {
 			var buf bytes.Buffer
 			var err error
 			dec := json.NewDecoder(c.Request.Body)
+			bodyBytes, err := io.ReadAll(c.Request.Body)
+
+			if err != nil {
+				c.String(http.StatusInternalServerError, "failed to read request body")
+				c.Abort()
+				return
+			}
+
+			// Восстанавливаем тело запроса после чтения
+			c.Request.Body = io.NopCloser(bytes.NewBuffer(bodyBytes))
+
+			// Выводим содержимое тела
+			fmt.Printf("Request Body: %s\n", string(bodyBytes))
+
+			
 			enc := json.NewEncoder(&buf)
 			var valueOld float64
 			for {
 				var item storage.Metric
 				err = dec.Decode(&item)
-				if err != nil && err != io.EOF {
+				if err == io.EOF {
+					break
+				}
+				if err != nil {
 					c.Header("Content-Type", "application/json; charset=utf-8")
                     c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 					c.Abort()
 					return
-				} else if err != nil && err == io.EOF {
-					break
 				}
 
 				if item.Type == storage.TYPECOUNTER {
@@ -77,8 +93,6 @@ func Update(stor *storage.MemStorage) gin.HandlerFunc {
 						return
 					}
 				}
-
-				fmt.Printf("income: %v\n", item)
 
 				err = stor.Push(&item)
 				if err != nil {
@@ -99,7 +113,6 @@ func Update(stor *storage.MemStorage) gin.HandlerFunc {
 				switch item.Type {
 				case storage.TYPECOUNTER:
 					item.Value = renewValue - valueOld
-					fmt.Printf("outcome: %v\n", item)
 					err = enc.Encode(&item)
 					if err != nil {
 						c.Header("Content-Type", "application/json; charset=utf-8")
@@ -109,7 +122,6 @@ func Update(stor *storage.MemStorage) gin.HandlerFunc {
 					}
 				case storage.TYPEGAUGE:
 					item.Value = renewValue
-					fmt.Printf("outcome: %v\n", item)
 					err = enc.Encode(&item)
 					if err != nil {
 						c.Header("Content-Type", "application/json; charset=utf-8")
@@ -119,7 +131,7 @@ func Update(stor *storage.MemStorage) gin.HandlerFunc {
 					}
 				}
 			}
-			c.Header("Сontent-Length", fmt.Sprint(buf.Len()))
+			c.Header("Content-Length", fmt.Sprint(buf.Len()))
 			c.Data(http.StatusOK, "application/json; charset=utf-8", buf.Bytes())
 		default:
 			c.String(http.StatusInternalServerError, "wrong metric type in context")
