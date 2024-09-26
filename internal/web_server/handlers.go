@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"strings"
 
 	"github.com/Grifonhard/Practicum-metrics/internal/storage"
 	"github.com/gin-gonic/gin"
@@ -59,7 +60,8 @@ func Update(stor *storage.MemStorage) gin.HandlerFunc {
 				var item storage.Metric
 				err = dec.Decode(&item)
 				if err != nil && err != io.EOF {
-					c.String(http.StatusBadRequest, fmt.Sprintf("fail while decode json: %s", err.Error()))
+					c.Header("Content-Type", "application/json; charset=utf-8")
+                    c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 					c.Abort()
 					return
 				} else if err != nil && err == io.EOF {
@@ -69,7 +71,8 @@ func Update(stor *storage.MemStorage) gin.HandlerFunc {
 				if item.Type == storage.TYPECOUNTER {
 					valueOld, err = stor.Get(&item)
 					if err != nil && err != storage.ErrMetricNoData {
-						c.String(http.StatusInternalServerError, fmt.Sprintf("%v", err))
+						c.Header("Content-Type", "application/json; charset=utf-8")
+                   		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 						c.Abort()
 						return
 					}
@@ -77,14 +80,16 @@ func Update(stor *storage.MemStorage) gin.HandlerFunc {
 
 				err = stor.Push(&item)
 				if err != nil {
-					c.String(http.StatusInternalServerError, fmt.Sprintf("fail while push error: %s", err.Error()))
+					c.Header("Content-Type", "application/json; charset=utf-8")
+                    c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 					c.Abort()
 					return
 				}
 
 				renewValue, err := stor.Get(&item)
 				if err != nil {
-					c.String(http.StatusInternalServerError, fmt.Sprintf("%v", err))
+					c.Header("Content-Type", "application/json; charset=utf-8")
+                    c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 					c.Abort()
 					return
 				}
@@ -94,7 +99,8 @@ func Update(stor *storage.MemStorage) gin.HandlerFunc {
 					item.Value = renewValue - valueOld
 					err = enc.Encode(item)
 					if err != nil {
-						c.String(http.StatusInternalServerError, err.Error())
+						c.Header("Content-Type", "application/json; charset=utf-8")
+                    	c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 						c.Abort()
 						return
 					}
@@ -102,14 +108,15 @@ func Update(stor *storage.MemStorage) gin.HandlerFunc {
 					item.Value = renewValue
 					err = enc.Encode(item)
 					if err != nil {
-						c.String(http.StatusInternalServerError, err.Error())
+						c.Header("Content-Type", "application/json; charset=utf-8")
+                    	c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 						c.Abort()
 						return
 					}
 				}
 			}
 			c.Header("Сontent-Length", fmt.Sprint(buf.Len()))
-			c.Data(http.StatusOK, "application/json", buf.Bytes())
+			c.Data(http.StatusOK, "application/json; charset=utf-8", buf.Bytes())
 		default:
 			c.String(http.StatusInternalServerError, "wrong metric type in context")
 			c.Abort()
@@ -120,9 +127,9 @@ func Update(stor *storage.MemStorage) gin.HandlerFunc {
 
 func GetJSON(stor *storage.MemStorage) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		if c.Request.Header.Get("Content-Type") != "application/json" {
-			c.Header("Content-Type", "text/plain; charset=utf-8")
-			c.String(http.StatusBadRequest, "wrong content type, only json allow")
+		if !strings.Contains(c.Request.Header.Get("Content-Type"), "application/json") {
+			c.Header("Content-Type", "application/json; charset=utf-8")
+			c.JSON(http.StatusBadRequest, gin.H{"error": "wrong content type, only json allow"})
 			c.Abort()
 			return
 		}
@@ -131,21 +138,21 @@ func GetJSON(stor *storage.MemStorage) gin.HandlerFunc {
 		var item storage.Metric
 		
 		if err := c.ShouldBindJSON(&item); err != nil {
-			c.Header("Content-Type", "text/plain; charset=utf-8")
-			c.String(http.StatusBadRequest, err.Error())
+			c.Header("Content-Type", "application/json; charset=utf-8")
+			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 			c.Abort()
 			return
 		}
 
 		value, err := stor.Get(&item)
 		if err != nil && err != storage.ErrMetricNoData{
-			c.Header("Content-Type", "text/plain; charset=utf-8")
-			c.String(http.StatusNotFound, err.Error())
+			c.Header("Content-Type", "application/json; charset=utf-8")
+			c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
 			c.Abort()
 			return
 		} else if err != nil {
-			c.Header("Content-Type", "text/plain; charset=utf-8")
-			c.String(http.StatusInternalServerError, err.Error())
+			c.Header("Content-Type", "application/json; charset=utf-8")
+            c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 			c.Abort()
 			return
 		}
