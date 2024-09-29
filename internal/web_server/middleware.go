@@ -131,25 +131,25 @@ func DataExtraction() gin.HandlerFunc {
 				}
 				c.Request.Body = dBody
 			}
-		}
-
-		hvAE := c.Request.Header.Values("Accept-Encoding")
-		for _, h := range hvAE {
-			if h == "gzip" {
-				cW, err := NewCompressResponseWriter(c.Writer)
-				if err != nil {
-					c.String(http.StatusInternalServerError, fmt.Sprintf("fail while create compress response error: %s", err.Error()))
-					c.Abort()
-					return
-				}
-				defer cW.Close()
-				defer cW.Flush()
-				c.Writer = cW
-			}
-		}
+		}		
 
 		if c.Request.Method == http.MethodPost && strings.Contains(c.Request.URL.Path, "/update") && strings.Contains(c.Request.Header.Get("Content-Type"), "application/json") {
 			c.Set(METRICTYPE, METRICTYPEJSON)
+
+			hvAE := c.Request.Header.Values("Accept-Encoding")
+			for _, h := range hvAE {
+				if h == "gzip" {
+					cW, err := NewCompressResponseWriter(c.Writer)
+					if err != nil {
+						c.String(http.StatusInternalServerError, fmt.Sprintf("fail while create compress response error: %s", err.Error()))
+						c.Abort()
+						return
+					}
+					defer cW.Close()
+					defer cW.Flush()
+					c.Writer = cW
+				}
+			}
 
 			c.Next()
 		} else {
