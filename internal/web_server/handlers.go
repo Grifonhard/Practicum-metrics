@@ -63,7 +63,7 @@ func Update(stor *storage.MemStorage) gin.HandlerFunc {
 				}
 				if err != nil {
 					c.Header("Content-Type", "application/json; charset=utf-8")
-                    c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+					c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 					c.Abort()
 					return
 				}
@@ -71,7 +71,7 @@ func Update(stor *storage.MemStorage) gin.HandlerFunc {
 				err = stor.Push(&item)
 				if err != nil {
 					c.Header("Content-Type", "application/json; charset=utf-8")
-                    c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+					c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 					c.Abort()
 					return
 				}
@@ -79,7 +79,7 @@ func Update(stor *storage.MemStorage) gin.HandlerFunc {
 				renewValue, err := stor.Get(&item)
 				if err != nil {
 					c.Header("Content-Type", "application/json; charset=utf-8")
-                    c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+					c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 					c.Abort()
 					return
 				}
@@ -88,7 +88,7 @@ func Update(stor *storage.MemStorage) gin.HandlerFunc {
 				err = enc.Encode(&item)
 				if err != nil {
 					c.Header("Content-Type", "application/json; charset=utf-8")
-                   	c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+					c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 					c.Abort()
 					return
 				}

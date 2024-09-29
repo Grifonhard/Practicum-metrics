@@ -2,6 +2,8 @@ package webserver
 
 import (
 	"compress/gzip"
+	"fmt"
+	"io"
 	"net/http"
 	"strings"
 	"time"
@@ -58,31 +60,31 @@ func ReqRespLogger() gin.HandlerFunc {
 	}
 }
 
-type decompressRequest struct {
-	*http.Request
+type decompressBody struct {
+	io.ReadCloser
 	gzipReader *gzip.Reader
 }
 
-func NewDecompressRequest(req *http.Request) (*decompressRequest, error) {
+func NewDecompressBody(req *http.Request) (*decompressBody, error) {
 	gzipReader, err := gzip.NewReader(req.Body)
 	if err != nil {
 		return nil, err
 	}
-	return &decompressRequest{
-		Request:    req,
+	return &decompressBody{
+		ReadCloser: req.Body,
 		gzipReader: gzipReader,
 	}, nil
 }
 
-func (d *decompressRequest) Read(p []byte) (n int, err error) {
+func (d *decompressBody) Read(p []byte) (n int, err error) {
 	return d.gzipReader.Read(p)
 }
 
-func (d *decompressRequest) Close() error {
+func (d *decompressBody) Close() error {
 	if err := d.gzipReader.Close(); err != nil {
 		return err
 	}
-	return d.Request.Body.Close()
+	return d.ReadCloser.Close()
 }
 
 type compressResponseWriter struct {
@@ -118,6 +120,32 @@ func (c *compressResponseWriter) Close() error {
 
 func DataExtraction() gin.HandlerFunc {
 	return func(c *gin.Context) {
+		hvCT := c.Request.Header.Values("Content-Encoding")
+		for _, h := range hvCT {
+			if h == "gzip" {
+				dBody, err := NewDecompressBody(c.Request)
+				if err != nil {
+					c.String(http.StatusInternalServerError, fmt.Sprintf("fail while create decompress request error: %s", err.Error()))
+					c.Abort()
+					return
+				}
+				c.Request.Body = dBody
+			}
+		}
+
+		hvAE := c.Request.Header.Values("Accept-Encoding")
+		for _, h := range hvAE {
+			if h == "gzip" {
+				cW, err := NewCompressResponseWriter(c.Writer)
+				if err != nil {
+					c.String(http.StatusInternalServerError, fmt.Sprintf("fail while create compress response error: %s", err.Error()))
+					c.Abort()
+					return
+				}
+				c.Writer = cW
+			}
+		}
+
 		if c.Request.Method == http.MethodPost && strings.Contains(c.Request.URL.Path, "/update") && strings.Contains(c.Request.Header.Get("Content-Type"), "application/json") {
 			c.Set(METRICTYPE, METRICTYPEJSON)
 
