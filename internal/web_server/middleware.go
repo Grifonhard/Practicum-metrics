@@ -131,14 +131,15 @@ func DataExtraction() gin.HandlerFunc {
 				}
 				c.Request.Body = dBody
 			}
-		}		
+		}
 
 		if c.Request.Method == http.MethodPost && strings.Contains(c.Request.URL.Path, "/update") && strings.Contains(c.Request.Header.Get("Content-Type"), "application/json") {
 			c.Set(METRICTYPE, METRICTYPEJSON)
 
 			hvAE := c.Request.Header.Values("Accept-Encoding")
+			var encode bool
 			for _, h := range hvAE {
-				if h == "gzip" {
+				if h == "gzip" && !encode {
 					cW, err := NewCompressResponseWriter(c.Writer)
 					if err != nil {
 						c.String(http.StatusInternalServerError, fmt.Sprintf("fail while create compress response error: %s", err.Error()))
@@ -148,6 +149,7 @@ func DataExtraction() gin.HandlerFunc {
 					defer cW.Close()
 					defer cW.Flush()
 					c.Writer = cW
+					encode = true
 				}
 			}
 
