@@ -133,7 +133,7 @@ func DataExtraction() gin.HandlerFunc {
 			}
 		}
 
-		hvAE := c.Request.Header.Values("Accept-Encoding")
+		/*hvAE := c.Request.Header.Values("Accept-Encoding")
 		for _, h := range hvAE {
 			if h == "gzip" {
 				cW, err := NewCompressResponseWriter(c.Writer)
@@ -144,7 +144,7 @@ func DataExtraction() gin.HandlerFunc {
 				}
 				c.Writer = cW
 			}
-		}
+		}*/
 
 		if c.Request.Method == http.MethodPost && strings.Contains(c.Request.URL.Path, "/update") && strings.Contains(c.Request.Header.Get("Content-Type"), "application/json") {
 			c.Set(METRICTYPE, METRICTYPEJSON)
