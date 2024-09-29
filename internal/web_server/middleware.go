@@ -86,6 +86,34 @@ func (d *decompressRequest) Close() error {
 }
 
 type compressResponseWriter struct {
+	gin.ResponseWriter
+	gzipWriter *gzip.Writer
+}
+
+func NewCompressResponseWriter(w gin.ResponseWriter) (*compressResponseWriter, error) {
+	gzipWriter := gzip.NewWriter(w)
+	return &compressResponseWriter{
+		ResponseWriter: w,
+		gzipWriter:     gzipWriter,
+	}, nil
+}
+
+func (c *compressResponseWriter) Write(p []byte) (int, error) {
+	return c.gzipWriter.Write(p)
+}
+
+func (c *compressResponseWriter) WriteHeader(code int) {
+	c.Header().Set("Content-Encoding", "gzip")
+	c.ResponseWriter.WriteHeader(code)
+}
+
+func (c *compressResponseWriter) Flush() {
+	c.gzipWriter.Flush()
+	c.ResponseWriter.Flush()
+}
+
+func (c *compressResponseWriter) Close() error {
+	return c.gzipWriter.Close()
 }
 
 func DataExtraction() gin.HandlerFunc {
