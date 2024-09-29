@@ -142,7 +142,7 @@ func DataExtraction() gin.HandlerFunc {
 			var encode bool
 			for _, h := range hvAE {
 				if strings.Contains(h, "gzip") && !encode {
-					cW, err := NewCompressResponseWriter(c.Writer)
+					/*cW, err := NewCompressResponseWriter(c.Writer)
 					if err != nil {
 						c.String(http.StatusInternalServerError, fmt.Sprintf("fail while create compress response error: %s", err.Error()))
 						c.Abort()
@@ -150,7 +150,7 @@ func DataExtraction() gin.HandlerFunc {
 					}
 					defer cW.Close()
 					defer cW.Flush()
-					c.Writer = cW
+					c.Writer = cW*/
 					encode = true
 				}
 			}
