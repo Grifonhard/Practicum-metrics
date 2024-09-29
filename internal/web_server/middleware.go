@@ -121,8 +121,9 @@ func (c *compressResponseWriter) Close() error {
 func DataExtraction() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		hvCT := c.Request.Header.Values("Content-Encoding")
+		var decode bool
 		for _, h := range hvCT {
-			if h == "gzip" {
+			if strings.Contains(h, "gzip") && !decode {
 				dBody, err := NewDecompressBody(c.Request)
 				if err != nil {
 					c.String(http.StatusInternalServerError, fmt.Sprintf("fail while create decompress request error: %s", err.Error()))
@@ -130,6 +131,7 @@ func DataExtraction() gin.HandlerFunc {
 					return
 				}
 				c.Request.Body = dBody
+				decode = true
 			}
 		}
 
@@ -139,7 +141,7 @@ func DataExtraction() gin.HandlerFunc {
 			hvAE := c.Request.Header.Values("Accept-Encoding")
 			var encode bool
 			for _, h := range hvAE {
-				if h == "gzip" && !encode {
+				if strings.Contains(h, "gzip") && !encode {
 					cW, err := NewCompressResponseWriter(c.Writer)
 					if err != nil {
 						c.String(http.StatusInternalServerError, fmt.Sprintf("fail while create compress response error: %s", err.Error()))
