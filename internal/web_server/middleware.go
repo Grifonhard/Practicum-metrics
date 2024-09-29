@@ -1,6 +1,7 @@
 package webserver
 
 import (
+	"compress/gzip"
 	"net/http"
 	"strings"
 	"time"
@@ -31,21 +32,6 @@ func (lw *loggingResponseWriter) WriteHeader(statusCode int) {
 	lw.ResponseWriter.WriteHeader(statusCode)
 }
 
-func DataExtraction() gin.HandlerFunc {
-	return func(c *gin.Context) {
-		if c.Request.Method == http.MethodPost && strings.Contains(c.Request.URL.Path, "/update") && strings.Contains(c.Request.Header.Get("Content-Type"), "application/json") {
-			c.Set(METRICTYPE, METRICTYPEJSON)
-
-			c.Next()
-		} else {
-
-			c.Set(METRICTYPE, METRICTYPEDEFAULT)
-
-			c.Next()
-		}
-	}
-}
-
 func ReqRespLogger() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		start := time.Now()
@@ -69,5 +55,50 @@ func ReqRespLogger() gin.HandlerFunc {
 			"status":       lw.respInfo.status,
 			"size":         lw.respInfo.size,
 		}).Info()
+	}
+}
+
+type decompressRequest struct {
+	*http.Request
+	gzipReader *gzip.Reader
+}
+
+func NewDecompressRequest(req *http.Request) (*decompressRequest, error) {
+	gzipReader, err := gzip.NewReader(req.Body)
+	if err != nil {
+		return nil, err
+	}
+	return &decompressRequest{
+		Request:    req,
+		gzipReader: gzipReader,
+	}, nil
+}
+
+func (d *decompressRequest) Read(p []byte) (n int, err error) {
+	return d.gzipReader.Read(p)
+}
+
+func (d *decompressRequest) Close() error {
+	if err := d.gzipReader.Close(); err != nil {
+		return err
+	}
+	return d.Request.Body.Close()
+}
+
+type compressResponseWriter struct {
+}
+
+func DataExtraction() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		if c.Request.Method == http.MethodPost && strings.Contains(c.Request.URL.Path, "/update") && strings.Contains(c.Request.Header.Get("Content-Type"), "application/json") {
+			c.Set(METRICTYPE, METRICTYPEJSON)
+
+			c.Next()
+		} else {
+
+			c.Set(METRICTYPE, METRICTYPEDEFAULT)
+
+			c.Next()
+		}
 	}
 }
