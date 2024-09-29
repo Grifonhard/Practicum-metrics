@@ -101,6 +101,7 @@ func NewCompressResponseWriter(w gin.ResponseWriter) (*compressResponseWriter, e
 }
 
 func (c *compressResponseWriter) Write(p []byte) (int, error) {
+	fmt.Println(string(p))
 	return c.gzipWriter.Write(p)
 }
 
@@ -148,11 +149,8 @@ func DataExtraction() gin.HandlerFunc {
 						c.Abort()
 						return
 					}
-					defer func (){
-						cW.Flush()
-						err = cW.Close()
-						fmt.Println(err)
-					}()
+					defer cW.Close()
+					defer cW.Flush()
 					c.Writer = cW
 					encode = true
 				}
