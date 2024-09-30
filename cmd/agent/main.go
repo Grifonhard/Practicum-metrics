@@ -37,7 +37,7 @@ func main() {
 	}
 
 	if cfg.Addr != "" {
-		*address = cfg.Addr
+		address = &cfg.Addr
 	}
 	if cfg.PollInterval != 0 {
 		pollInterval = &cfg.PollInterval
