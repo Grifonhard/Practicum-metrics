@@ -49,6 +49,7 @@ func (f *File) Read() (map[string]float64, map[string][]float64, error) {
 
 	_, err := os.Stat(path)
 	if os.IsNotExist(err) {
+		fmt.Println("FILE NO EXIST")
 		return data.ItemsGauge, data.ItemsCounter, nil
 	} else if err != nil {
 		return nil, nil, err
@@ -56,8 +57,8 @@ func (f *File) Read() (map[string]float64, map[string][]float64, error) {
 
 	file, err := os.Open(path)
 	if err != nil {
-        return nil, nil, err
-    }
+		return nil, nil, err
+	}
 	defer file.Close()
 
 	decoder := gob.NewDecoder(file)
@@ -70,6 +71,6 @@ func (f *File) Read() (map[string]float64, map[string][]float64, error) {
 			return nil, nil, fmt.Errorf("не удалось удалить поврежденный файл: %w", removeErr)
 		}
 	}
-	
+
 	return data.ItemsGauge, data.ItemsCounter, nil
 }
