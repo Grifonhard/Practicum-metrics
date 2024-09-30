@@ -9,7 +9,8 @@ import (
 )
 
 func TestPush(t *testing.T) {
-	stor := New()
+	stor, err := New(0, "./", false)
+	assert.NoError(t, err)
 
 	metrics := []Metric{
 		{
@@ -34,7 +35,7 @@ func TestPush(t *testing.T) {
 		},
 	}
 
-	err := stor.Push(&metrics[0])
+	err = stor.Push(&metrics[0])
 	assert.NoError(t, err)
 	assert.Equal(t, stor.ItemsGauge[metrics[0].Name], metrics[0].Value)
 	err = stor.Push(&metrics[1])

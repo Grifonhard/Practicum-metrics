@@ -3,11 +3,15 @@ package storage
 import (
 	"encoding/json"
 	"sync"
+	"time"
+
+	"github.com/Grifonhard/Practicum-metrics/internal/storage/fileio"
 )
 
 const (
-	TYPEGAUGE   = "gauge"
-	TYPECOUNTER = "counter"
+	TYPEGAUGE      = "gauge"
+	TYPECOUNTER    = "counter"
+	BACKUPFILENAME = "backup"
 )
 
 type Stor interface {
@@ -18,12 +22,15 @@ type Stor interface {
 type MemStorage struct {
 	ItemsGauge   map[string]float64
 	ItemsCounter map[string][]float64
+	backupChan   chan time.Time
+	backupTicker *time.Ticker
+	backupFile   *fileio.File
 	mu           sync.Mutex
 }
 
 type Metric struct {
-	Type  string `json:"type"`
-	Name  string `json:"id"`
+	Type  string  `json:"type"`
+	Name  string  `json:"id"`
 	Value float64 `json:"-"`
 }
 
@@ -34,19 +41,19 @@ func (m *Metric) MarshalJSON() ([]byte, error) {
 		value := m.Value
 		return json.Marshal(struct {
 			*MAlias
-			V    *float64 `json:"value,omitempty"`
+			V *float64 `json:"value,omitempty"`
 		}{
 			MAlias: (*MAlias)(m),
-			V:    &value,
+			V:      &value,
 		})
 	case TYPECOUNTER:
 		dlt := int64(m.Value)
 		return json.Marshal(struct {
 			*MAlias
-			D    *int64 `json:"delta,omitempty"`
+			D *int64 `json:"delta,omitempty"`
 		}{
 			MAlias: (*MAlias)(m),
-			D:    &dlt,
+			D:      &dlt,
 		})
 	default:
 		return nil, ErrMetricTypeUnknown
@@ -57,8 +64,8 @@ func (m *Metric) UnmarshalJSON(data []byte) error {
 	type MAlias Metric
 	apiMetric := struct {
 		*MAlias
-		V    *float64 `json:"value,omitempty"`
-		D    *int64   `json:"delta,omitempty"`
+		V *float64 `json:"value,omitempty"`
+		D *int64   `json:"delta,omitempty"`
 	}{MAlias: (*MAlias)(m)}
 	if err := json.Unmarshal(data, &apiMetric); err != nil {
 		return err

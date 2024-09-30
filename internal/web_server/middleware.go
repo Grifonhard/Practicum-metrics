@@ -166,7 +166,7 @@ func RespEncode() gin.HandlerFunc {
 				encode = true
 			}
 		}
-		
+
 		c.Next()
 	}
 }

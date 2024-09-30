@@ -6,15 +6,36 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"time"
+
+	"github.com/Grifonhard/Practicum-metrics/internal/logger"
+	"github.com/Grifonhard/Practicum-metrics/internal/storage/fileio"
 )
 
-func New() *MemStorage {
+func New(interval int, filepath string, restore bool) (*MemStorage, error) {
 	var storage MemStorage
 
-	storage.ItemsGauge = make(map[string]float64)
-	storage.ItemsCounter = make(map[string][]float64)
+	if interval != 0 {
+		ticker := time.NewTicker(time.Duration(interval) * time.Second)
+		storage.backupTicker = ticker
+	} else {
+		storage.backupChan = make(chan time.Time)
+	}
 
-	return &storage
+	storage.backupFile = fileio.New(filepath, BACKUPFILENAME)
+
+	var err error
+	if restore {
+		storage.ItemsGauge, storage.ItemsCounter, err = storage.backupFile.Read()
+		if err != nil {
+			return nil, err
+		}
+	} else {
+		storage.ItemsGauge = make(map[string]float64)
+		storage.ItemsCounter = make(map[string][]float64)
+	}
+
+	return &storage, nil
 }
 
 func (ms *MemStorage) Push(metric *Metric) error {
@@ -24,13 +45,15 @@ func (ms *MemStorage) Push(metric *Metric) error {
 	switch metric.Type {
 	case TYPEGAUGE:
 		ms.ItemsGauge[metric.Name] = metric.Value
-		return nil
 	case TYPECOUNTER:
 		ms.ItemsCounter[metric.Name] = append(ms.ItemsCounter[metric.Name], metric.Value)
-		return nil
 	default:
 		return ErrMetricTypeUnknown
 	}
+	if ms.backupChan != nil {
+		ms.backupChan <- time.Now()
+	}
+	return nil
 }
 
 func (ms *MemStorage) Get(metric *Metric) (float64, error) {
@@ -69,6 +92,44 @@ func (ms *MemStorage) List() ([]string, error) {
 	wg.Wait()
 
 	return list, nil
+}
+
+func (ms *MemStorage) BackupLoop() {
+	defer func() {
+		ms.mu.Lock()
+		err := ms.backupFile.Write(&fileio.Data{
+			ItemsGauge:   ms.ItemsGauge,
+			ItemsCounter: ms.ItemsCounter,
+		})
+		ms.mu.Unlock()
+		if err != nil {
+			logger.Error(err)
+		}
+		if ms.backupTicker != nil {
+			ms.backupTicker.Stop()
+		}
+		if ms.backupChan != nil {
+			close(ms.backupChan)
+		}
+	}()
+	for {
+		select {
+		case _ = <-ms.backupChan:
+			ms.mu.Lock()
+			ms.backupFile.Write(&fileio.Data{
+				ItemsGauge:   ms.ItemsGauge,
+				ItemsCounter: ms.ItemsCounter,
+			})
+			ms.mu.Unlock()
+		case _ = <- ms.backupTicker.C:
+			ms.mu.Lock()
+			ms.backupFile.Write(&fileio.Data{
+				ItemsGauge:   ms.ItemsGauge,
+				ItemsCounter: ms.ItemsCounter,
+			})
+			ms.mu.Unlock()
+		}
+	}
 }
 
 func (ms *MemStorage) listGauge(list *[]string, wg *sync.WaitGroup) {

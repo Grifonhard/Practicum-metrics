@@ -13,15 +13,23 @@ import (
 )
 
 const (
-	DEFAULTADDR = "localhost:8080"
+	DEFAULTADDR          = "localhost:8080"
+	DEFAULTSTOREINTERVAL = 300
+	DEFAULTRESTORE       = true
 )
 
 type CFG struct {
-	Addr string `env:"ADDRESS"`
+	Addr            string `env:"ADDRESS"`
+	StoreInterval   int    `env:"STORE_INTERVAL"`
+	FileStoragePath string `env:"FILE_STORAGE_PATH"`
+	Restore         bool   `env:"RESTORE" envDefault:"true"`
 }
 
 func main() {
 	addr := flag.String("a", DEFAULTADDR, "server port")
+	storeInterval := flag.Int("i", DEFAULTSTOREINTERVAL, "backup interval")
+	fileStoragePath := flag.String("i", "", "file storage path")
+	restore := flag.Bool("r", DEFAULTRESTORE, "restore from backup")
 
 	flag.Parse()
 
@@ -34,13 +42,27 @@ func main() {
 	if cfg.Addr != "" {
 		*addr = cfg.Addr
 	}
-
-	stor := storage.New()
+	if cfg.StoreInterval != 0 {
+		*storeInterval = cfg.StoreInterval
+	}
+	if cfg.FileStoragePath != "" {
+		*fileStoragePath = cfg.FileStoragePath
+	}
+	if !cfg.Restore {
+		*restore = cfg.Restore
+	}
 
 	err = logger.Init()
 	if err != nil {
 		log.Fatal(err)
 	}
+
+	stor, err := storage.New(*storeInterval, *fileStoragePath, *restore)
+	if err != nil {
+		logger.Error(err)
+	}
+
+	go stor.BackupLoop()
 
 	r := initRouter()
 

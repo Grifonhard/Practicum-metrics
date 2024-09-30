@@ -16,7 +16,8 @@ import (
 
 func TestPost(t *testing.T) {
 	//подготовка
-	stor := storage.New()
+	stor, err := storage.New(0, "", false)
+	assert.NoError(t, err)
 
 	updatePath := "/update"
 
@@ -81,7 +82,8 @@ func TestPost(t *testing.T) {
 
 func TestGetJSON(t *testing.T) {
 	//подготовка
-	stor := storage.New()
+	stor, err := storage.New(0, "", false)
+	assert.NoError(t, err)
 	stor.ItemsCounter = map[string][]float64{
 		"testcounter": {1.11, 2.22},
 	}
@@ -89,7 +91,7 @@ func TestGetJSON(t *testing.T) {
 		"testgauge": 3.33,
 	}
 
-	err := logger.Init()
+	err = logger.Init()
 	if err != nil {
 		log.Fatal(err)
 	}
