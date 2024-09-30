@@ -48,7 +48,7 @@ func main() {
 	r.POST("/update/:type/:name/:value", web.ReqRespLogger(), web.DataExtraction(), web.Update(stor))
 	r.GET("/value/:type/:name", web.ReqRespLogger(), web.DataExtraction(), web.Get(stor))
 	r.POST("/value/", web.ReqRespLogger(), web.RespEncode(), web.GetJSON(stor))
-	r.GET("/", web.ReqRespLogger(), web.List(stor))
+	r.GET("/", web.ReqRespLogger(), web.RespEncode(), web.List(stor))
 
 	fmt.Printf("Server start %s\n", *addr)
 	log.Fatal(r.Run(*addr))
