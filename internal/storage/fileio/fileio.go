@@ -65,7 +65,7 @@ func (f *File) Read() (map[string]float64, map[string][]float64, error) {
 
 	err = decoder.Decode(&data)
 	if err == io.ErrUnexpectedEOF {
-		logger.Error("Файл %s поврежден, удаляю...\n", path)
+		logger.Error(fmt.Sprintf("Файл %s поврежден, удаляю...\n", path))
 		removeErr := os.Remove(path)
 		if removeErr != nil {
 			return nil, nil, fmt.Errorf("не удалось удалить поврежденный файл: %w", removeErr)

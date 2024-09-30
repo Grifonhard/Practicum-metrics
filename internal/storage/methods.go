@@ -119,7 +119,7 @@ func (ms *MemStorage) BackupLoop() {
 	}()
 	for {
 		select {
-		case _ = <-ms.backupChan:
+		case <-ms.backupChan:
 			ms.mu.Lock()
 			err := ms.backupFile.Write(&fileio.Data{
 				ItemsGauge:   ms.ItemsGauge,
@@ -129,7 +129,7 @@ func (ms *MemStorage) BackupLoop() {
 			if err != nil {
 				logger.Error(err)
 			}
-		case _ = <- ms.backupTickerChan:
+		case <- ms.backupTickerChan:
 			ms.mu.Lock()
 			err := ms.backupFile.Write(&fileio.Data{
 				ItemsGauge:   ms.ItemsGauge,
