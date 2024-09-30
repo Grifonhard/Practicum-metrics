@@ -38,7 +38,18 @@ func (f *File) Write(data *Data) error {
 }
 
 func (f *File) Read() (map[string]float64, map[string][]float64, error) {
+	var data Data
+	data.ItemsGauge = make(map[string]float64)
+	data.ItemsCounter = make(map[string][]float64)
+
 	path := filepath.Join(f.Path, f.Name)
+
+	_, err := os.Stat(path)
+	if os.IsNotExist(err) {
+		return data.ItemsGauge, data.ItemsCounter, nil
+	} else if err != nil {
+		return nil, nil, err
+	}
 
 	file, err := os.Open(path)
 	if err != nil {
@@ -47,10 +58,6 @@ func (f *File) Read() (map[string]float64, map[string][]float64, error) {
 	defer file.Close()
 
 	decoder := gob.NewDecoder(file)
-
-	var data Data
-	data.ItemsGauge = make(map[string]float64)
-	data.ItemsCounter = make(map[string][]float64)
 
 	err = decoder.Decode(&data)
 	if err != nil {

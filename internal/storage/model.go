@@ -22,7 +22,8 @@ type Stor interface {
 type MemStorage struct {
 	ItemsGauge   map[string]float64
 	ItemsCounter map[string][]float64
-	backupChan   chan time.Time
+	backupChan   chan struct{}
+	backupTickerChan <- chan time.Time 
 	backupTicker *time.Ticker
 	backupFile   *fileio.File
 	mu           sync.Mutex

@@ -28,7 +28,7 @@ type CFG struct {
 func main() {
 	addr := flag.String("a", DEFAULTADDR, "server port")
 	storeInterval := flag.Int("i", DEFAULTSTOREINTERVAL, "backup interval")
-	fileStoragePath := flag.String("i", "", "file storage path")
+	fileStoragePath := flag.String("f", "", "file storage path")
 	restore := flag.Bool("r", DEFAULTRESTORE, "restore from backup")
 
 	flag.Parse()
@@ -59,7 +59,7 @@ func main() {
 
 	stor, err := storage.New(*storeInterval, *fileStoragePath, *restore)
 	if err != nil {
-		logger.Error(err)
+		panic(err)
 	}
 
 	go stor.BackupLoop()
@@ -78,6 +78,6 @@ func main() {
 
 func initRouter() *gin.Engine {
 	router := gin.Default()
-	router.LoadHTMLGlob("templates/*")
+	router.LoadHTMLGlob("../../templates/*")
 	return router
 }

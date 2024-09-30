@@ -13,13 +13,14 @@ import (
 )
 
 func New(interval int, filepath string, restore bool) (*MemStorage, error) {
+	fmt.Printf("start: %d, path: %s, restore: %t\n", interval, filepath, restore)
 	var storage MemStorage
 
 	if interval != 0 {
-		ticker := time.NewTicker(time.Duration(interval) * time.Second)
-		storage.backupTicker = ticker
+		storage.backupTicker = time.NewTicker(time.Duration(interval) * time.Second)
+		storage.backupTickerChan = storage.backupTicker.C
 	} else {
-		storage.backupChan = make(chan time.Time)
+		storage.backupChan = make(chan struct{})
 	}
 
 	storage.backupFile = fileio.New(filepath, BACKUPFILENAME)
@@ -39,6 +40,7 @@ func New(interval int, filepath string, restore bool) (*MemStorage, error) {
 }
 
 func (ms *MemStorage) Push(metric *Metric) error {
+	ms.mu.Lock()
 	if metric == nil {
 		return ErrMetricEmpty
 	}
@@ -50,13 +52,16 @@ func (ms *MemStorage) Push(metric *Metric) error {
 	default:
 		return ErrMetricTypeUnknown
 	}
+	ms.mu.Unlock()
 	if ms.backupChan != nil {
-		ms.backupChan <- time.Now()
+		ms.backupChan <- struct{}{}
 	}
 	return nil
 }
 
 func (ms *MemStorage) Get(metric *Metric) (float64, error) {
+	ms.mu.Lock()
+	defer ms.mu.Unlock()
 	if metric == nil {
 		return 0, ErrMetricEmpty
 	}
@@ -116,18 +121,24 @@ func (ms *MemStorage) BackupLoop() {
 		select {
 		case _ = <-ms.backupChan:
 			ms.mu.Lock()
-			ms.backupFile.Write(&fileio.Data{
+			err := ms.backupFile.Write(&fileio.Data{
 				ItemsGauge:   ms.ItemsGauge,
 				ItemsCounter: ms.ItemsCounter,
 			})
 			ms.mu.Unlock()
-		case _ = <- ms.backupTicker.C:
+			if err != nil {
+				logger.Error(err)
+			}
+		case _ = <- ms.backupTickerChan:
 			ms.mu.Lock()
-			ms.backupFile.Write(&fileio.Data{
+			err := ms.backupFile.Write(&fileio.Data{
 				ItemsGauge:   ms.ItemsGauge,
 				ItemsCounter: ms.ItemsCounter,
 			})
 			ms.mu.Unlock()
+			if err != nil {
+				logger.Error(err)
+			}
 		}
 	}
 }
@@ -135,26 +146,36 @@ func (ms *MemStorage) BackupLoop() {
 func (ms *MemStorage) listGauge(list *[]string, wg *sync.WaitGroup) {
 	defer wg.Done()
 	var i int
+	ms.mu.Lock()
 	for n, v := range ms.ItemsGauge {
+		ms.mu.Unlock()
 		ms.mu.Lock()
 		(*list)[i] = fmt.Sprintf("%s: %f", n, v)
 		ms.mu.Unlock()
 		i++
+		ms.mu.Lock()
 	}
+	ms.mu.Unlock()
 }
 
 func (ms *MemStorage) listCounter(list *[]string, wg *sync.WaitGroup) {
 	defer wg.Done()
 	i := len(ms.ItemsGauge)
+	ms.mu.Lock()
 	for n, ves := range ms.ItemsCounter {
+		ms.mu.Unlock()
 		var values string
 		for _, v := range ves {
 			values = fmt.Sprintf("%s, %s", values, fmt.Sprintf("%f", v))
 		}
 		values, _ = strings.CutPrefix(values, ", ")
+		ms.mu.Lock()
 		(*list)[i] = fmt.Sprintf("%s: %s", n, values)
+		ms.mu.Unlock()
 		i++
+		ms.mu.Lock()
 	}
+	ms.mu.Unlock()
 }
 
 func ValidateAndConvert(method, mType, mName, mValue string) (*Metric, error) {
