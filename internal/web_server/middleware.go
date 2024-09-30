@@ -148,6 +148,8 @@ func DataExtraction() gin.HandlerFunc {
 						c.Abort()
 						return
 					}
+					defer cW.Close()
+					defer cW.Flush()
 					c.Writer = cW
 					encode = true
 				}

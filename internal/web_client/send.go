@@ -59,8 +59,10 @@ func SendMetric(url string, gen *metgen.MetGen) {
 			}
 			req.Header.Set("Content-Type", "application/json")
 			req.Header.Set("Content-Encoding","gzip")
-			cl := &http.Client{}
-			cl.Timeout = time.Minute
+			//какого-то хрена заголовок Accept-Encoding gzip устанавливается автоматически в клиенте по умолчанию
+			cl := &http.Client{
+				Timeout: time.Minute,
+			}
 
 			resp, err := cl.Do(req)
 			if err != nil {

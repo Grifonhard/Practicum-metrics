@@ -93,7 +93,6 @@ func Update(stor *storage.MemStorage) gin.HandlerFunc {
 					return
 				}
 			}
-			c.Header("Content-Length", fmt.Sprint(buf.Len()))
 			c.Data(http.StatusOK, "application/json; charset=utf-8", buf.Bytes())
 		default:
 			c.String(http.StatusInternalServerError, "wrong metric type in context")

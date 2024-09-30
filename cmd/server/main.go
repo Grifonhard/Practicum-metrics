@@ -56,6 +56,6 @@ func main() {
 
 func initRouter() *gin.Engine {
 	router := gin.Default()
-	router.LoadHTMLGlob("templates/*")
+	router.LoadHTMLGlob("../../templates/*")
 	return router
 }
