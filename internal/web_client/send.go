@@ -2,6 +2,7 @@ package webclient
 
 import (
 	"bytes"
+	"compress/gzip"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -42,16 +43,26 @@ func SendMetric(url string, gen *metgen.MetGen) {
 			}
 		case <-ctx.Done():
 			close(ch)
+			//сжимаем данные
+			compressed, err := compressBeforeSend(&buf)
+			if err != nil {
+				fmt.Printf("fail while compress: %s", err.Error())
+				cancel()
+				return
+			}
 			//подготовка реквеста и клиента
-			req, err := http.NewRequest(http.MethodPost, url, &buf)
+			req, err := http.NewRequest(http.MethodPost, url, compressed)
 			if err != nil {
 				fmt.Printf("fail while create request: %s", err.Error())
 				cancel()
 				return
 			}
 			req.Header.Set("Content-Type", "application/json")
-			cl := &http.Client{}
-			cl.Timeout = time.Minute
+			req.Header.Set("Content-Encoding","gzip")
+			//какого-то хрена заголовок Accept-Encoding gzip устанавливается автоматически в клиенте по умолчанию
+			cl := &http.Client{
+				Timeout: time.Minute,
+			}
 
 			resp, err := cl.Do(req)
 			if err != nil {
@@ -94,4 +105,21 @@ func prepareDataToSend(g map[string]float64, c map[string]int64, ch chan *Metric
 	}()
 	wg.Wait()	
 	cancel()
+}
+
+func compressBeforeSend(b *bytes.Buffer) (compressed *bytes.Buffer, err error) {
+	compressed = new(bytes.Buffer)
+	writer := gzip.NewWriter(compressed)
+	
+	_, err = writer.Write(b.Bytes())
+	if err != nil {
+		return nil, err
+	}
+
+	err = writer.Close()
+	if err != nil {
+		return nil, err
+	}
+
+	return compressed, nil
 }
