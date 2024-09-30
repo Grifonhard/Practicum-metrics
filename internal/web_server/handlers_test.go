@@ -20,6 +20,8 @@ func TestPost(t *testing.T) {
 	stor, err := storage.New(0, "", false)
 	assert.NoError(t, err)
 
+	go stor.BackupLoop()
+
 	updatePath := "/update"
 
 	name := "name"
@@ -85,6 +87,9 @@ func TestGetJSON(t *testing.T) {
 	//подготовка
 	stor, err := storage.New(0, "", false)
 	assert.NoError(t, err)
+
+	go stor.BackupLoop()
+
 	stor.ItemsCounter = map[string][]float64{
 		"testcounter": {1.11, 2.22},
 	}

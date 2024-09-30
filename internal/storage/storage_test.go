@@ -36,10 +36,7 @@ func TestPush(t *testing.T) {
 	}
 
 	go func(){
-		for {
-			select{
-			case <- stor.backupChan:
-			}
+		for range stor.backupChan{
 		}
 	}()
 
