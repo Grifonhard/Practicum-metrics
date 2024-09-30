@@ -26,7 +26,7 @@ func New(interval int, filepath string, restore bool) (*MemStorage, error) {
 
 	storage.backupFile, err = fileio.New(filepath, BACKUPFILENAME)
 	if err != nil {
-		fmt.Println(err)
+		return nil, err
 	}
 
 	if restore {
