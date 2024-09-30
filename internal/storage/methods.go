@@ -22,9 +22,13 @@ func New(interval int, filepath string, restore bool) (*MemStorage, error) {
 		storage.backupChan = make(chan struct{})
 	}
 
-	storage.backupFile = fileio.New(filepath, BACKUPFILENAME)
-
 	var err error
+
+	storage.backupFile, err = fileio.New(filepath, BACKUPFILENAME)
+	if err != nil {
+		return nil, err
+	}
+
 	if restore {
 		storage.ItemsGauge, storage.ItemsCounter, err = storage.backupFile.Read()
 		if err != nil {
@@ -117,6 +121,10 @@ func (ms *MemStorage) BackupLoop() {
 		}
 		if ms.backupChan != nil {
 			close(ms.backupChan)
+		}
+		err = ms.backupFile.Close()
+		if err != nil {
+			logger.Error(fmt.Sprintf("fail whil close file: %v", err))
 		}
 	}()
 	for {
