@@ -9,7 +9,7 @@ import (
 )
 
 func TestPush(t *testing.T) {
-	stor, err := New(0, "./", false)
+	stor, err := New(0, "", false)
 	assert.NoError(t, err)
 
 	metrics := []Metric{
@@ -34,6 +34,14 @@ func TestPush(t *testing.T) {
 			Value: 4.48,
 		},
 	}
+
+	go func(){
+		for {
+			select{
+			case <- stor.backupChan:
+			}
+		}
+	}()
 
 	err = stor.Push(&metrics[0])
 	assert.NoError(t, err)

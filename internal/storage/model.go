@@ -5,7 +5,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/Grifonhard/Practicum-metrics/internal/fileio"
+	"github.com/Grifonhard/Practicum-metrics/internal/storage/fileio"
 )
 
 const (

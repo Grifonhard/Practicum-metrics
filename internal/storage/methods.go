@@ -8,12 +8,11 @@ import (
 	"sync"
 	"time"
 
-	"github.com/Grifonhard/Practicum-metrics/internal/fileio"
 	"github.com/Grifonhard/Practicum-metrics/internal/logger"
+	"github.com/Grifonhard/Practicum-metrics/internal/storage/fileio"
 )
 
 func New(interval int, filepath string, restore bool) (*MemStorage, error) {
-	fmt.Printf("start: %d, path: %s, restore: %t\n", interval, filepath, restore)
 	var storage MemStorage
 
 	if interval != 0 {
