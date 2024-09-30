@@ -123,7 +123,6 @@ func GetJSON(stor *storage.MemStorage) gin.HandlerFunc {
 
 		value, err := stor.Get(&item)
 		if err != nil && err == storage.ErrMetricNoData {
-			fmt.Println(item)
 			c.Header("Content-Type", "application/json; charset=utf-8")
 			c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
 			c.Abort()

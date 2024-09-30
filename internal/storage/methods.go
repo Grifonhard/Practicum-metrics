@@ -87,11 +87,14 @@ func (ms *MemStorage) Get(metric *Metric) (float64, error) {
 }
 
 func (ms *MemStorage) List() ([]string, error) {
+	ms.mu.Lock()
+	defer ms.mu.Unlock()
 	list := make([]string, len(ms.ItemsCounter)+len(ms.ItemsCounter))
+	var listMu sync.Mutex
 	var wg sync.WaitGroup
 	wg.Add(2)
-	go ms.listGauge(&list, &wg)
-	go ms.listCounter(&list, &wg)
+	go ms.listGauge(&list, &wg, &listMu)
+	go ms.listCounter(&list, &wg, &listMu)
 
 	wg.Wait()
 
@@ -128,7 +131,7 @@ func (ms *MemStorage) BackupLoop() {
 			if err != nil {
 				logger.Error(err)
 			}
-		case <- ms.backupTickerChan:
+		case <-ms.backupTickerChan:
 			ms.mu.Lock()
 			err := ms.backupFile.Write(&fileio.Data{
 				ItemsGauge:   ms.ItemsGauge,
@@ -142,39 +145,31 @@ func (ms *MemStorage) BackupLoop() {
 	}
 }
 
-func (ms *MemStorage) listGauge(list *[]string, wg *sync.WaitGroup) {
+func (ms *MemStorage) listGauge(list *[]string, wg *sync.WaitGroup, mu *sync.Mutex) {
 	defer wg.Done()
 	var i int
-	ms.mu.Lock()
 	for n, v := range ms.ItemsGauge {
-		ms.mu.Unlock()
-		ms.mu.Lock()
+		mu.Lock()
 		(*list)[i] = fmt.Sprintf("%s: %f", n, v)
-		ms.mu.Unlock()
+		mu.Unlock()
 		i++
-		ms.mu.Lock()
 	}
-	ms.mu.Unlock()
 }
 
-func (ms *MemStorage) listCounter(list *[]string, wg *sync.WaitGroup) {
+func (ms *MemStorage) listCounter(list *[]string, wg *sync.WaitGroup, mu *sync.Mutex) {
 	defer wg.Done()
 	i := len(ms.ItemsGauge)
-	ms.mu.Lock()
 	for n, ves := range ms.ItemsCounter {
-		ms.mu.Unlock()
 		var values string
 		for _, v := range ves {
 			values = fmt.Sprintf("%s, %s", values, fmt.Sprintf("%f", v))
 		}
 		values, _ = strings.CutPrefix(values, ", ")
-		ms.mu.Lock()
+		mu.Lock()
 		(*list)[i] = fmt.Sprintf("%s: %s", n, values)
-		ms.mu.Unlock()
+		mu.Unlock()
 		i++
-		ms.mu.Lock()
 	}
-	ms.mu.Unlock()
 }
 
 func ValidateAndConvert(method, mType, mName, mValue string) (*Metric, error) {
