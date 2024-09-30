@@ -2,8 +2,12 @@ package fileio
 
 import (
 	"encoding/gob"
+	"fmt"
+	"io"
 	"os"
 	"path/filepath"
+
+	"github.com/Grifonhard/Practicum-metrics/internal/logger"
 )
 
 type File struct {
@@ -60,7 +64,13 @@ func (f *File) Read() (map[string]float64, map[string][]float64, error) {
 	decoder := gob.NewDecoder(file)
 
 	err = decoder.Decode(&data)
-	if err != nil {
+	if err == io.ErrUnexpectedEOF {
+		logger.Error("Файл %s поврежден, удаляю...\n", path)
+		removeErr := os.Remove(path)
+		if removeErr != nil {
+			return nil, nil, fmt.Errorf("не удалось удалить поврежденный файл: %w", removeErr)
+		}
+	} else if err != nil {
         return nil, nil, err
     }
 	
