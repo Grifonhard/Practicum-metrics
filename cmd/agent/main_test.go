@@ -44,13 +44,13 @@ func TestMainConfig(t *testing.T) {
 	require.NoError(t, err, "Ошибка при парсинге переменных окружения")
 
 	// Логика по установке значений в зависимости от переменных окружения
-	if cfg.Addr != "" {
+	if _, exist := os.LookupEnv("ADDRESS"); exist {
 		address = &cfg.Addr
 	}
-	if cfg.PollInterval != 0 {
+	if _, exist := os.LookupEnv("REPORT_INTERVAL"); exist {
 		pollInterval = &cfg.PollInterval
 	}
-	if cfg.ReportInterval != 0 {
+	if _, exist := os.LookupEnv("POLL_INTERVAL"); exist {
 		reportInterval = &cfg.ReportInterval
 	}
 

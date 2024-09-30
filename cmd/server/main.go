@@ -40,17 +40,17 @@ func main() {
 		log.Fatal(err)
 	}
 
-	if cfg.Addr != "" {
-		*addr = cfg.Addr
+	if _, exist := os.LookupEnv("ADDRESS"); exist {
+		addr = &cfg.Addr
 	}
-	if cfg.StoreInterval != 0 {
-		*storeInterval = cfg.StoreInterval
+	if _, exist := os.LookupEnv("STORE_INTERVAL"); exist  {
+		storeInterval = &cfg.StoreInterval
 	}
-	if cfg.FileStoragePath != "" {
-		*fileStoragePath = cfg.FileStoragePath
+	if _, exist := os.LookupEnv("FILE_STORAGE_PATH"); exist  {
+		fileStoragePath = &cfg.FileStoragePath
 	}
-	if !cfg.Restore {
-		*restore = cfg.Restore
+	if _, exist := os.LookupEnv("RESTORE"); exist  {
+		restore = &cfg.Restore
 	}
 
 	err = logger.Init(os.Stdout,4)
@@ -79,6 +79,6 @@ func main() {
 
 func initRouter() *gin.Engine {
 	router := gin.Default()
-	router.LoadHTMLGlob("templates/*")
+	router.LoadHTMLGlob("../../templates/*")
 	return router
 }

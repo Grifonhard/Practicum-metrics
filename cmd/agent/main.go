@@ -4,6 +4,7 @@ import (
 	"flag"
 	"fmt"
 	"log"
+	"os"
 	"time"
 
 	metgen "github.com/Grifonhard/Practicum-metrics/internal/met_gen"
@@ -36,13 +37,13 @@ func main() {
 		log.Fatal(err)
 	}
 
-	if cfg.Addr != "" {
+	if _, exist := os.LookupEnv("ADDRESS"); exist {
 		address = &cfg.Addr
 	}
-	if cfg.PollInterval != 0 {
+	if _, exist := os.LookupEnv("REPORT_INTERVAL"); exist {
 		pollInterval = &cfg.PollInterval
 	}
-	if cfg.ReportInterval != 0 {
+	if _, exist := os.LookupEnv("POLL_INTERVAL"); exist {
 		reportInterval = &cfg.ReportInterval
 	}
 
