@@ -43,24 +43,24 @@ func main() {
 	if _, exist := os.LookupEnv("ADDRESS"); exist {
 		addr = &cfg.Addr
 	}
-	if _, exist := os.LookupEnv("STORE_INTERVAL"); exist  {
+	if _, exist := os.LookupEnv("STORE_INTERVAL"); exist {
 		storeInterval = &cfg.StoreInterval
 	}
-	if _, exist := os.LookupEnv("FILE_STORAGE_PATH"); exist  {
+	if _, exist := os.LookupEnv("FILE_STORAGE_PATH"); exist {
 		fileStoragePath = &cfg.FileStoragePath
 	}
-	if _, exist := os.LookupEnv("RESTORE"); exist  {
+	if _, exist := os.LookupEnv("RESTORE"); exist {
 		restore = &cfg.Restore
 	}
 
-	err = logger.Init(os.Stdout,4)
+	err = logger.Init(os.Stdout, 4)
 	if err != nil {
 		log.Fatal(err)
 	}
 
 	stor, err := storage.New(*storeInterval, *fileStoragePath, *restore)
 	if err != nil {
-		panic(err)
+		log.Fatal(err)
 	}
 
 	go stor.BackupLoop()
