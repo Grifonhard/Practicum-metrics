@@ -11,7 +11,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestMainConfig(t *testing.T) {
+func TestMain(t *testing.T) {
 	// Сохраняем текущие флаги и переменные окружения
 	oldArgs := os.Args
 	defer func() { os.Args = oldArgs }()
