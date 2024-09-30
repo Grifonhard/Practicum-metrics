@@ -8,8 +8,8 @@ import (
 	"sync"
 	"time"
 
+	"github.com/Grifonhard/Practicum-metrics/internal/fileio"
 	"github.com/Grifonhard/Practicum-metrics/internal/logger"
-	"github.com/Grifonhard/Practicum-metrics/internal/storage/fileio"
 )
 
 func New(interval int, filepath string, restore bool) (*MemStorage, error) {
