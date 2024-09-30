@@ -138,23 +138,6 @@ func DataExtraction() gin.HandlerFunc {
 		if c.Request.Method == http.MethodPost && strings.Contains(c.Request.URL.Path, "/update") && strings.Contains(c.Request.Header.Get("Content-Type"), "application/json") {
 			c.Set(METRICTYPE, METRICTYPEJSON)
 
-			hvAE := c.Request.Header.Values("Accept-Encoding")
-			var encode bool
-			for _, h := range hvAE {
-				if strings.Contains(h, "gzip") && !encode {
-					cW, err := NewCompressResponseWriter(c.Writer)
-					if err != nil {
-						c.String(http.StatusInternalServerError, fmt.Sprintf("fail while create compress response error: %s", err.Error()))
-						c.Abort()
-						return
-					}
-					defer cW.Close()
-					defer cW.Flush()
-					c.Writer = cW
-					encode = true
-				}
-			}
-
 			c.Next()
 		} else {
 
@@ -162,5 +145,28 @@ func DataExtraction() gin.HandlerFunc {
 
 			c.Next()
 		}
+	}
+}
+
+func RespEncode() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		hvAE := c.Request.Header.Values("Accept-Encoding")
+		var encode bool
+		for _, h := range hvAE {
+			if strings.Contains(h, "gzip") && !encode {
+				cW, err := NewCompressResponseWriter(c.Writer)
+				if err != nil {
+					c.String(http.StatusInternalServerError, fmt.Sprintf("fail while create compress response error: %s", err.Error()))
+					c.Abort()
+					return
+				}
+				defer cW.Close()
+				defer cW.Flush()
+				c.Writer = cW
+				encode = true
+			}
+		}
+		
+		c.Next()
 	}
 }
