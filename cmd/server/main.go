@@ -4,6 +4,7 @@ import (
 	"flag"
 	"fmt"
 	"log"
+	"os"
 
 	"github.com/Grifonhard/Practicum-metrics/internal/logger"
 	"github.com/Grifonhard/Practicum-metrics/internal/storage"
@@ -52,7 +53,7 @@ func main() {
 		*restore = cfg.Restore
 	}
 
-	err = logger.Init()
+	err = logger.Init(os.Stdout,4)
 	if err != nil {
 		log.Fatal(err)
 	}

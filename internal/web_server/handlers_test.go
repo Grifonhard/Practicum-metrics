@@ -6,6 +6,7 @@ import (
 	"log"
 	"net/http"
 	"net/http/httptest"
+	"os"
 	"testing"
 
 	"github.com/Grifonhard/Practicum-metrics/internal/logger"
@@ -91,7 +92,7 @@ func TestGetJSON(t *testing.T) {
 		"testgauge": 3.33,
 	}
 
-	err = logger.Init()
+	err = logger.Init(os.Stdout,4)
 	if err != nil {
 		log.Fatal(err)
 	}

@@ -1,6 +1,7 @@
 package logger
 
 import (
+	"io"
 	"os"
 
 	"github.com/sirupsen/logrus"
@@ -8,12 +9,17 @@ import (
 
 var logger *logrus.Logger
 
-func Init() error {
+//level from 0 to 5
+func Init(output io.Writer, level int) error {
 	log := logrus.New()
 
-	logrus.SetOutput(os.Stdout)
+	if output != nil {
+		log.SetOutput(output)
+	} else {
+		log.SetOutput(os.Stdout)
+	}
 
-	logrus.SetLevel(logrus.InfoLevel)
+	log.SetLevel(logrus.Level(level))
 
 	logger = log
 
