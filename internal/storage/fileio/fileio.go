@@ -27,14 +27,17 @@ func New(path, filename string) (*File, error) {
 	var mu sync.Mutex
 	fullpath := filepath.Join(path, filename)
 
-	_, err := os.OpenFile(fullpath, os.O_RDWR|os.O_CREATE, 0666)
-	if strings.Contains(err.Error(), "no such file or directory") {
-		err = os.Mkdir(path, 0755)
-		if err != nil {
+	if path != "" {
+		_, err := os.OpenFile(fullpath, os.O_RDWR|os.O_CREATE, 0666)
+		if err != nil && strings.Contains(err.Error(), "no such file or directory") {
+			fmt.Println("create directory")
+			err = os.Mkdir(path, 0755)
+			if err != nil {
+				fmt.Println(err)
+			}
+		} else {
 			fmt.Println(err)
 		}
-	} else {
-		fmt.Println(err)
 	}
 
 	/*file, err := os.OpenFile(fullpath, os.O_RDWR|os.O_CREATE, 0666)
