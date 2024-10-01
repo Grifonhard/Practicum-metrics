@@ -1,12 +1,11 @@
 package fileio
 
 import (
+	"bytes"
 	"encoding/gob"
 	"fmt"
 	"io"
-
-	//"os"
-	"bytes"
+	"os"
 	"path/filepath"
 	"sync"
 	//"github.com/Grifonhard/Practicum-metrics/internal/logger"
@@ -26,6 +25,9 @@ type Data struct {
 func New(path, filename string) (*File, error) {
 	var mu sync.Mutex
 	fullpath := filepath.Join(path, filename)
+
+	_, err := os.OpenFile(fullpath, os.O_RDWR|os.O_CREATE, 0666)
+	fmt.Println(err)
 
 	/*file, err := os.OpenFile(fullpath, os.O_RDWR|os.O_CREATE, 0666)
 	if err != nil {
