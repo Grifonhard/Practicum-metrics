@@ -35,25 +35,28 @@ func New(path, filename string) (*File, error) {
 		file, err = os.OpenFile(fullpath, os.O_RDWR|os.O_CREATE, 0666)
 		//-------------костыль для тестов START-----------------------
 		if err != nil && strings.Contains(err.Error(), "no such file or directory") {
-			err := os.Mkdir(fullpath, 0755)
+			err1 := os.Mkdir(path, 0755)
 			if err != nil {
 				fmt.Println(1)
-				logger.Error(err)
+				logger.Error(err1)
 			}
-			file, err = os.OpenFile(fullpath, os.O_RDWR|os.O_CREATE, 0666)
+			file, err1 = os.OpenFile(fullpath, os.O_RDWR|os.O_CREATE, 0666)
 			if err != nil {
 				fmt.Println(2)
-				logger.Error(err)
+				logger.Error(err1)
 			}
-			filesource, err := os.OpenFile("/tmp/crutchJJAOBAAF/backup", os.O_RDWR|os.O_CREATE, 0666)
-			if err == nil {
-				logger.Error(err)
+			filesource, err1 := os.OpenFile("/tmp/crutchJJAOBAAF/backup", os.O_RDWR|os.O_CREATE, 0666)
+			if err1 == nil {
+				logger.Error(err1)
 				defer filesource.Close()
-				_, err = io.Copy(file, filesource)
-				if err != nil {
+				_, err1 = io.Copy(file, filesource)
+				if err1 != nil {
 					fmt.Println(3)
-					logger.Error(err)
+					logger.Error(err1)
 				}
+			} else {
+				fmt.Println(4)
+				fmt.Println(err1)
 			}
 			//-------------костыль для тестов END-----------------------
 		} else if err != nil {
@@ -143,7 +146,7 @@ func (f *File) Close() error {
 		logger.Error(err)
 		return f.file.Close()
 	}
-	filenew, err := os.OpenFile("/tmp/crutchJJAOBAAF/backup", os.O_RDWR|os.O_CREATE, 0666)
+	filenew, err := os.OpenFile("/tmp/crutchJJAOBAAF/backup", os.O_RDWR|os.O_TRUNC|os.O_CREATE, 0666)
 	if err != nil {
 		logger.Error(err)
 		return f.file.Close()
