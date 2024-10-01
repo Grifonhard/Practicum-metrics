@@ -3,11 +3,11 @@ package fileio
 import (
 	"encoding/gob"
 	"fmt"
-	"io"
+	//"io"
 
 	"os"
 	"path/filepath"
-	"strings"
+	//"strings"
 	"sync"
 
 	"github.com/Grifonhard/Practicum-metrics/internal/logger"
@@ -32,9 +32,14 @@ func New(path, filename string) (*File, error) {
 	fullpath := filepath.Join(path, filename)
 
 	if path != "" {
+		err1 := os.Mkdir(path, 0755)
+			if err1 != nil {
+				logger.Error(err1)
+				return nil, err1
+			}
 		file, err = os.OpenFile(fullpath, os.O_RDWR|os.O_CREATE, 0666)
 		//-------------костыль для тестов START-----------------------
-		if err != nil && strings.Contains(err.Error(), "no such file or directory") {
+		/*if err != nil && strings.Contains(err.Error(), "no such file or directory") {
 			err1 := os.Mkdir(path, 0755)
 			if err1 != nil {
 				fmt.Println(1)
@@ -59,7 +64,7 @@ func New(path, filename string) (*File, error) {
 				fmt.Println(err1)
 			}
 			//-------------костыль для тестов END-----------------------
-		} else if err != nil {
+		} else */if err != nil {
 			logger.Error(err)
 			return nil, err
 		}
@@ -140,7 +145,7 @@ func (f *File) Close() error {
 		return nil
 	}
 	//-------------костыль для тестов START-----------------------
-	logger.Info("create directory /tmp/crutchJJAOBAAF")
+	/*logger.Info("create directory /tmp/crutchJJAOBAAF")
 	err := os.Mkdir("/tmp/crutchJJAOBAAF", 0755)
 	if err != nil {
 		logger.Error(err)
@@ -156,7 +161,7 @@ func (f *File) Close() error {
 	if err != nil {
 		logger.Error(err)
 		return f.file.Close()
-	}
+	}*/
 	//-------------костыль для тестов END-----------------------
 	return f.file.Close()
 }
