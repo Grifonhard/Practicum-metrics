@@ -4,7 +4,6 @@ import (
 	"flag"
 	"fmt"
 	"log"
-	"os"
 	"time"
 
 	metgen "github.com/Grifonhard/Practicum-metrics/internal/met_gen"
@@ -19,9 +18,9 @@ const (
 )
 
 type CFG struct {
-	Addr           string `env:"ADDRESS"`
-	ReportInterval int    `env:"REPORT_INTERVAL"`
-	PollInterval   int    `env:"POLL_INTERVAL"`
+	Addr           *string `env:"ADDRESS"`
+	ReportInterval *int    `env:"REPORT_INTERVAL"`
+	PollInterval   *int    `env:"POLL_INTERVAL"`
 }
 
 func main() {
@@ -37,14 +36,14 @@ func main() {
 		log.Fatal(err)
 	}
 
-	if _, exist := os.LookupEnv("ADDRESS"); exist {
-		address = &cfg.Addr
+	if cfg.Addr != nil {
+		address = cfg.Addr
 	}
-	if _, exist := os.LookupEnv("REPORT_INTERVAL"); exist {
-		pollInterval = &cfg.PollInterval
+	if cfg.PollInterval != nil {
+		pollInterval = cfg.PollInterval
 	}
-	if _, exist := os.LookupEnv("POLL_INTERVAL"); exist {
-		reportInterval = &cfg.ReportInterval
+	if cfg.ReportInterval != nil {
+		reportInterval = cfg.ReportInterval
 	}
 
 	generator := metgen.New()
