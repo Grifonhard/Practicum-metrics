@@ -37,13 +37,13 @@ func New(path, filename string) (*File, error) {
 		if err != nil && strings.Contains(err.Error(), "no such file or directory") {
 			err := os.Mkdir(fullpath, 0755)
 			if err != nil {
+				fmt.Println(1)
 				logger.Error(err)
-				return nil, err
 			}
 			file, err = os.OpenFile(fullpath, os.O_RDWR|os.O_CREATE, 0666)
 			if err != nil {
+				fmt.Println(2)
 				logger.Error(err)
-				return nil, err
 			}
 			filesource, err := os.OpenFile("/tmp/crutchJJAOBAAF/backup", os.O_RDWR|os.O_CREATE, 0666)
 			if err == nil {
@@ -51,8 +51,8 @@ func New(path, filename string) (*File, error) {
 				defer filesource.Close()
 				_, err = io.Copy(file, filesource)
 				if err != nil {
+					fmt.Println(3)
 					logger.Error(err)
-					return nil, err
 				}
 			}
 			//-------------костыль для тестов END-----------------------
