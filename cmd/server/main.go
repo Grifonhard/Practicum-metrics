@@ -27,18 +27,21 @@ type CFG struct {
 }
 
 func main() {
+	fmt.Println(1)
 	addr := flag.String("a", DEFAULTADDR, "server address")
 	storeInterval := flag.Int("i", DEFAULTSTOREINTERVAL, "backup interval")
 	fileStoragePath := flag.String("f", "", "file storage path")
 	restore := flag.Bool("r", DEFAULTRESTORE, "restore from backup")
 
 	flag.Parse()
+	fmt.Println(2)
 
 	var cfg CFG
 	err := env.Parse(&cfg)
 	if err != nil {
 		log.Fatal(err)
 	}
+	fmt.Println(3)
 
 	if cfg.Addr != nil {
 		addr = cfg.Addr
@@ -57,15 +60,19 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
+	fmt.Println(4)
 
 	stor, err := storage.New(*storeInterval, *fileStoragePath, *restore)
 	if err != nil {
 		log.Fatal(err)
 	}
+	fmt.Println(5)
 
 	go stor.BackupLoop()
+	fmt.Println(6)
 
 	r := initRouter()
+	fmt.Println(7)
 
 	r.POST("/update", web.ReqRespLogger(), web.DataExtraction(), web.RespEncode(), web.Update(stor))
 	r.POST("/update/:type/:name/:value", web.ReqRespLogger(), web.DataExtraction(), web.Update(stor))

@@ -56,7 +56,7 @@ func main() {
 		case <-timerPoll.C:
 			err = generator.Renew()
 			if err != nil {
-				fmt.Printf("Fail renew metrics: %s", err.Error())
+				fmt.Printf("Fail renew metrics: %s\n", err.Error())
 			}
 		case <-timerReport.C:
 			go webclient.SendMetric(fmt.Sprintf("http://%s/update", *address), generator)
