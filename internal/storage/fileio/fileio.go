@@ -7,6 +7,7 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"strings"
 	"sync"
 	//"github.com/Grifonhard/Practicum-metrics/internal/logger"
 )
@@ -27,7 +28,14 @@ func New(path, filename string) (*File, error) {
 	fullpath := filepath.Join(path, filename)
 
 	_, err := os.OpenFile(fullpath, os.O_RDWR|os.O_CREATE, 0666)
-	fmt.Println(err)
+	if strings.Contains(err.Error(), "no such file or directory") {
+		err = os.Mkdir(path, 0755)
+		if err != nil {
+			fmt.Println(err)
+		}
+	} else {
+		fmt.Println(err)
+	}
 
 	/*file, err := os.OpenFile(fullpath, os.O_RDWR|os.O_CREATE, 0666)
 	if err != nil {
