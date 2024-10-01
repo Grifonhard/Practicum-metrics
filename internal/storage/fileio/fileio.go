@@ -3,16 +3,18 @@ package fileio
 import (
 	"encoding/gob"
 	"fmt"
-	"os"
+	"io"
+
+	//"os"
+	"bytes"
 	"path/filepath"
 	"sync"
-
-	"github.com/Grifonhard/Practicum-metrics/internal/logger"
+	//"github.com/Grifonhard/Practicum-metrics/internal/logger"
 )
 
 type File struct {
 	fullpath string
-	file     *os.File
+	file     io.ReadWriter
 	mu       *sync.Mutex
 }
 
@@ -25,14 +27,17 @@ func New(path, filename string) (*File, error) {
 	var mu sync.Mutex
 	fullpath := filepath.Join(path, filename)
 
-	file, err := os.OpenFile(fullpath, os.O_RDWR|os.O_CREATE, 0666)
+	/*file, err := os.OpenFile(fullpath, os.O_RDWR|os.O_CREATE, 0666)
 	if err != nil {
 		return nil, err
-	}
+	}*/
+	var buf bytes.Buffer
+
+	fmt.Println(fullpath)
 
 	return &File{
 		fullpath: fullpath,
-		file:     file,
+		file:     &buf,
 		mu:       &mu,
 	}, nil
 }
@@ -41,7 +46,7 @@ func (f *File) Write(data *Data) error {
 	f.mu.Lock()
 	defer f.mu.Unlock()
 
-	err := f.file.Truncate(0)
+	/*err := f.file.Truncate(0)
 	if err != nil {
 		return fmt.Errorf("fail truncate file: %w", err)
 	}
@@ -57,7 +62,8 @@ func (f *File) Write(data *Data) error {
 		return fmt.Errorf("failed to write data to file: %w", err)
 	}
 
-	return f.file.Sync()
+	return f.file.Sync()*/
+	return nil
 }
 
 func (f *File) Read() (map[string]float64, map[string][]float64, error) {
@@ -68,29 +74,31 @@ func (f *File) Read() (map[string]float64, map[string][]float64, error) {
 	data.ItemsGauge = make(map[string]float64)
 	data.ItemsCounter = make(map[string][]float64)
 
-	fileInfo, err := f.file.Stat()
+	/*fileInfo, err := f.file.Stat()
 	if err != nil {
 		return nil, nil, fmt.Errorf("не удалось получить информацию о файле: %w", err)
 	}
 
 	if fileInfo.Size() == 0 {
 		return data.ItemsGauge, data.ItemsCounter, nil
-	}
+	}*/
 
 	decoder := gob.NewDecoder(f.file)
 
-	err = decoder.Decode(&data)
+	err := decoder.Decode(&data)
 	if err != nil {
-		logger.Error(fmt.Sprintf("Файл %s поврежден, удаляю...\n", f.fullpath))
+		/*logger.Error(fmt.Sprintf("Файл %s поврежден, удаляю...\n", f.fullpath))
 		removeErr := os.Remove(f.fullpath)
 		if removeErr != nil {
 			return nil, nil, fmt.Errorf("не удалось удалить поврежденный файл: %w", removeErr)
-		}
+		}*/
+		fmt.Println(err)
 	}
 
 	return data.ItemsGauge, data.ItemsCounter, nil
 }
 
 func (f *File) Close() error {
-	return f.file.Close()
+	//return f.file.Close()
+	return nil
 }
