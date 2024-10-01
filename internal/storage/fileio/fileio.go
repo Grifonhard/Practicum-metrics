@@ -36,12 +36,12 @@ func New(path, filename string) (*File, error) {
 		//-------------костыль для тестов START-----------------------
 		if err != nil && strings.Contains(err.Error(), "no such file or directory") {
 			err1 := os.Mkdir(path, 0755)
-			if err != nil {
+			if err1 != nil {
 				fmt.Println(1)
 				logger.Error(err1)
 			}
 			file, err1 = os.OpenFile(fullpath, os.O_RDWR|os.O_CREATE, 0666)
-			if err != nil {
+			if err1 != nil {
 				fmt.Println(2)
 				logger.Error(err1)
 			}
