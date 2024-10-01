@@ -20,14 +20,14 @@ const (
 )
 
 type CFG struct {
-	Addr            string `env:"ADDRESS"`
-	StoreInterval   int    `env:"STORE_INTERVAL"`
-	FileStoragePath string `env:"FILE_STORAGE_PATH"`
-	Restore         bool   `env:"RESTORE" envDefault:"true"`
+	Addr            *string `env:"ADDRESS"`
+	StoreInterval   *int    `env:"STORE_INTERVAL"`
+	FileStoragePath *string `env:"FILE_STORAGE_PATH"`
+	Restore         *bool   `env:"RESTORE"`
 }
 
 func main() {
-	addr := flag.String("a", DEFAULTADDR, "server port")
+	addr := flag.String("a", DEFAULTADDR, "server address")
 	storeInterval := flag.Int("i", DEFAULTSTOREINTERVAL, "backup interval")
 	fileStoragePath := flag.String("f", "", "file storage path")
 	restore := flag.Bool("r", DEFAULTRESTORE, "restore from backup")
@@ -40,17 +40,17 @@ func main() {
 		log.Fatal(err)
 	}
 
-	if _, exist := os.LookupEnv("ADDRESS"); exist {
-		addr = &cfg.Addr
+	if cfg.Addr != nil {
+		addr = cfg.Addr
 	}
-	if _, exist := os.LookupEnv("STORE_INTERVAL"); exist {
-		storeInterval = &cfg.StoreInterval
+	if cfg.StoreInterval != nil {
+		storeInterval = cfg.StoreInterval
 	}
-	if _, exist := os.LookupEnv("FILE_STORAGE_PATH"); exist {
-		fileStoragePath = &cfg.FileStoragePath
+	if cfg.FileStoragePath != nil {
+		fileStoragePath = cfg.FileStoragePath
 	}
-	if _, exist := os.LookupEnv("RESTORE"); exist {
-		restore = &cfg.Restore
+	if cfg.Restore != nil {
+		restore = cfg.Restore
 	}
 
 	err = logger.Init(os.Stdout, 4)
