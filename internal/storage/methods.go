@@ -12,11 +12,11 @@ import (
 	"github.com/Grifonhard/Practicum-metrics/internal/storage/fileio"
 )
 
-func New(interval int, filepath string, restore bool) (*MemStorage, error) {
+func New(intervalBackup int, filepathBackup string, restoreFromBackup bool) (*MemStorage, error) {
 	var storage MemStorage
 
-	if interval != 0 {
-		storage.backupTicker = time.NewTicker(time.Duration(interval) * time.Second)
+	if intervalBackup != 0 {
+		storage.backupTicker = time.NewTicker(time.Duration(intervalBackup) * time.Second)
 		storage.backupTickerChan = storage.backupTicker.C
 	} else {
 		storage.backupChan = make(chan struct{})
@@ -24,12 +24,12 @@ func New(interval int, filepath string, restore bool) (*MemStorage, error) {
 
 	var err error
 
-	storage.backupFile, err = fileio.New(filepath, BACKUPFILENAME)
+	storage.backupFile, err = fileio.New(filepathBackup, BACKUPFILENAME)
 	if err != nil {
 		return nil, err
 	}
 
-	if restore {
+	if restoreFromBackup {
 		storage.ItemsGauge, storage.ItemsCounter, err = storage.backupFile.Read()
 		if err != nil {
 			return nil, err
