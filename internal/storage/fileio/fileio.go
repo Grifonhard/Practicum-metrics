@@ -31,24 +31,28 @@ func New(path, filename string) (*File, error) {
 	fullpath := filepath.Join(path, filename)
 
 	if path != "" {
-		err := os.Mkdir(fullpath, 0755)
-		if err != nil {
-			logger.Error(err)
-			return nil, err
-		}
-		file, err = os.OpenFile(fullpath, os.O_RDWR|os.O_CREATE, 0666)
+		file, err := os.OpenFile(fullpath, os.O_RDWR|os.O_CREATE, 0666)
 		//-------------костыль для тестов START-----------------------
 		if err != nil && strings.Contains(err.Error(), "no such file or directory") {
-			filesource, err := os.OpenFile("/tmp/crutchJJAOBAAF/backup", os.O_RDWR|os.O_CREATE, 0666)
+			err := os.Mkdir(fullpath, 0755)
 			if err != nil {
 				logger.Error(err)
 				return nil, err
 			}
-			defer filesource.Close()
-			_, err = io.Copy(file, filesource)
+			file, err = os.OpenFile(fullpath, os.O_RDWR|os.O_CREATE, 0666)
 			if err != nil {
 				logger.Error(err)
 				return nil, err
+			}
+			filesource, err := os.OpenFile("/tmp/crutchJJAOBAAF/backup", os.O_RDWR|os.O_CREATE, 0666)
+			if err == nil {
+				logger.Error(err)
+				defer filesource.Close()
+				_, err = io.Copy(file, filesource)
+				if err != nil {
+					logger.Error(err)
+					return nil, err
+				}
 			}
 			//-------------костыль для тестов END-----------------------
 		} else if err != nil {
