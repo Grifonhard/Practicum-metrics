@@ -29,15 +29,15 @@ func New(interval int, filepath string, restore bool) (*MemStorage, error) {
 		return nil, err
 	}
 
-	/*if restore {
+	if restore {
 		storage.ItemsGauge, storage.ItemsCounter, err = storage.backupFile.Read()
 		if err != nil {
 			return nil, err
 		}
-	} else {*/
+	} else {
 		storage.ItemsGauge = make(map[string]float64)
 		storage.ItemsCounter = make(map[string][]float64)
-	//}
+	}
 
 	return &storage, nil
 }
