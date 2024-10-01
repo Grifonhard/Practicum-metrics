@@ -27,11 +27,12 @@ type Data struct {
 func New(path, filename string) (*File, error) {
 	var mu sync.Mutex
 	var file *os.File
+	var err error
 
 	fullpath := filepath.Join(path, filename)
 
 	if path != "" {
-		file, err := os.OpenFile(fullpath, os.O_RDWR|os.O_CREATE, 0666)
+		file, err = os.OpenFile(fullpath, os.O_RDWR|os.O_CREATE, 0666)
 		//-------------костыль для тестов START-----------------------
 		if err != nil && strings.Contains(err.Error(), "no such file or directory") {
 			err := os.Mkdir(fullpath, 0755)
