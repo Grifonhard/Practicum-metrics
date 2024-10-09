@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"strings"
 
+	"github.com/Grifonhard/Practicum-metrics/internal/drivers/psql"
 	"github.com/Grifonhard/Practicum-metrics/internal/logger"
 	"github.com/Grifonhard/Practicum-metrics/internal/storage"
 	"github.com/gin-gonic/gin"
@@ -210,5 +211,18 @@ func List(stor *storage.MemStorage) gin.HandlerFunc {
 			"Title": "List of metrics",
 			"Items": list,
 		})
+	}
+}
+
+func PingDB(db *psql.DB) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		err := db.Ping()
+		if err != nil {
+			logger.Error(fmt.Sprintf("fail ping db error: %s", err.Error()))
+			c.String(http.StatusInternalServerError, "fail ping db")
+			c.Abort()
+			return
+		}
+		c.String(http.StatusOK, )
 	}
 }
