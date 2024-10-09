@@ -6,84 +6,178 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"time"
+
+	"github.com/Grifonhard/Practicum-metrics/internal/logger"
+	"github.com/Grifonhard/Practicum-metrics/internal/storage/fileio"
 )
 
-func New() *MemStorage {
+func New(intervalBackup int, filepathBackup string, restoreFromBackup bool) (*MemStorage, error) {
 	var storage MemStorage
 
-	storage.ItemsGauge = make(map[string]float64)
-	storage.ItemsCounter = make(map[string][]float64)
+	if intervalBackup != 0 {
+		storage.backupTicker = time.NewTicker(time.Duration(intervalBackup) * time.Second)
+		storage.backupTickerChan = storage.backupTicker.C
+	} else {
+		storage.backupChan = make(chan struct{})
+	}
 
-	return &storage
+	var err error
+
+	storage.backupFile, err = fileio.New(filepathBackup, BACKUPFILENAME)
+	if err != nil {
+		return nil, err
+	}
+
+	if restoreFromBackup {
+		storage.ItemsGauge, storage.ItemsCounter, err = storage.backupFile.Read()
+		if err != nil {
+			return nil, err
+		}
+	} else {
+		storage.ItemsGauge = make(map[string]float64)
+		storage.ItemsCounter = make(map[string][]float64)
+	}
+
+	return &storage, nil
 }
 
 func (ms *MemStorage) Push(metric *Metric) error {
+	ms.mu.Lock()
 	if metric == nil {
 		return ErrMetricEmpty
 	}
 	switch metric.Type {
 	case TYPEGAUGE:
 		ms.ItemsGauge[metric.Name] = metric.Value
-		return nil
 	case TYPECOUNTER:
 		ms.ItemsCounter[metric.Name] = append(ms.ItemsCounter[metric.Name], metric.Value)
-		return nil
 	default:
 		return ErrMetricTypeUnknown
 	}
+	ms.mu.Unlock()
+	if ms.backupChan != nil {
+		ms.backupChan <- struct{}{}
+	}
+	return nil
 }
 
-func (ms *MemStorage) Get(metric *Metric) (string, error) {
+func (ms *MemStorage) Get(metric *Metric) (float64, error) {
+	ms.mu.Lock()
+	defer ms.mu.Unlock()
 	if metric == nil {
-		return "", ErrMetricEmpty
+		return 0, ErrMetricEmpty
 	}
 	switch metric.Type {
 	case TYPEGAUGE:
 		result, ok := ms.ItemsGauge[metric.Name]
 		if !ok {
-			return "", ErrMetricNoData
+			return 0, ErrMetricNoData
 		}
-		return fmt.Sprint(result), nil
+		return result, nil
 	case TYPECOUNTER:
 		values, ok := ms.ItemsCounter[metric.Name]
 		if !ok {
-			return "", ErrMetricNoData
+			return 0, ErrMetricNoData
 		}
 		var result float64
 		for _, v := range values {
 			result += v
 		}
-		return fmt.Sprint(result), nil
+		return result, nil
 	default:
-		return "", ErrMetricTypeUnknown
+		return 0, ErrMetricTypeUnknown
 	}
 }
 
 func (ms *MemStorage) List() ([]string, error) {
+	ms.mu.Lock()
+	defer ms.mu.Unlock()
 	list := make([]string, len(ms.ItemsCounter)+len(ms.ItemsCounter))
+	var listMu sync.Mutex
 	var wg sync.WaitGroup
-	wg.Add(len(ms.ItemsGauge))
-	for n, v := range ms.ItemsGauge {
-		go ms.listRoutin(&list, fmt.Sprintf("%s: %f", n, v), &wg)
+	wg.Add(2)
+	go ms.listGauge(&list, &wg, &listMu)
+	go ms.listCounter(&list, &wg, &listMu)
+
+	wg.Wait()
+
+	return list, nil
+}
+
+func (ms *MemStorage) BackupLoop() {
+	defer func() {
+		ms.mu.Lock()
+		err := ms.backupFile.Write(&fileio.Data{
+			ItemsGauge:   ms.ItemsGauge,
+			ItemsCounter: ms.ItemsCounter,
+		})
+		ms.mu.Unlock()
+		if err != nil {
+			logger.Error(err)
+		}
+		if ms.backupTicker != nil {
+			ms.backupTicker.Stop()
+		}
+		if ms.backupChan != nil {
+			close(ms.backupChan)
+		}
+		err = ms.backupFile.Close()
+		if err != nil {
+			logger.Error(fmt.Sprintf("fail whil close file: %v", err))
+		}
+	}()
+	for {
+		select {
+		case <-ms.backupChan:
+			ms.mu.Lock()
+			err := ms.backupFile.Write(&fileio.Data{
+				ItemsGauge:   ms.ItemsGauge,
+				ItemsCounter: ms.ItemsCounter,
+			})
+			ms.mu.Unlock()
+			if err != nil {
+				logger.Error(err)
+			}
+		case <-ms.backupTickerChan:
+			ms.mu.Lock()
+			err := ms.backupFile.Write(&fileio.Data{
+				ItemsGauge:   ms.ItemsGauge,
+				ItemsCounter: ms.ItemsCounter,
+			})
+			ms.mu.Unlock()
+			if err != nil {
+				logger.Error(err)
+			}
+		}
 	}
+}
+
+func (ms *MemStorage) listGauge(list *[]string, wg *sync.WaitGroup, mu *sync.Mutex) {
+	defer wg.Done()
+	var i int
+	for n, v := range ms.ItemsGauge {
+		mu.Lock()
+		(*list)[i] = fmt.Sprintf("%s: %f", n, v)
+		mu.Unlock()
+		i++
+	}
+}
+
+func (ms *MemStorage) listCounter(list *[]string, wg *sync.WaitGroup, mu *sync.Mutex) {
+	defer wg.Done()
+	i := len(ms.ItemsGauge)
 	for n, ves := range ms.ItemsCounter {
 		var values string
 		for _, v := range ves {
 			values = fmt.Sprintf("%s, %s", values, fmt.Sprintf("%f", v))
 		}
 		values, _ = strings.CutPrefix(values, ", ")
-		wg.Wait()
-		list = append(list, fmt.Sprintf("%s: %s", n, values))
+		mu.Lock()
+		(*list)[i] = fmt.Sprintf("%s: %s", n, values)
+		mu.Unlock()
+		i++
 	}
-
-	return list, nil
-}
-
-func (ms *MemStorage) listRoutin(list *[]string, info string, wg *sync.WaitGroup) {
-	ms.mu.Lock()
-	defer wg.Done()
-	defer ms.mu.Unlock()
-	(*list) = append((*list), info)
 }
 
 func ValidateAndConvert(method, mType, mName, mValue string) (*Metric, error) {

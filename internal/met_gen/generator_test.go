@@ -13,9 +13,9 @@ func TestRenew(t *testing.T){
 	err := gen.Renew()
 	assert.NoError(t, err)
 
-	assert.Equal(t, 28, len(gen.metricsGauge), fmt.Sprintf("gauge map len: %d", len(gen.metricsGauge)))
+	assert.Equal(t, 28, len(gen.MetricsGauge), fmt.Sprintf("gauge map len: %d", len(gen.MetricsGauge)))
 
-	assert.Equal(t, 1, len(gen.metricsCounter), fmt.Sprintf("counter map len: %d", len(gen.metricsGauge)))
+	assert.Equal(t, 1, len(gen.MetricsCounter), fmt.Sprintf("counter map len: %d", len(gen.MetricsCounter)))
 }
 
 func TestCollect(t *testing.T){

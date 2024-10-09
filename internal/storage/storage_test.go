@@ -1,13 +1,16 @@
 package storage
 
 import (
+	"encoding/json"
+	"fmt"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 )
 
 func TestPush(t *testing.T) {
-	stor := New()
+	stor, err := New(0, "", false)
+	assert.NoError(t, err)
 
 	metrics := []Metric{
 		{
@@ -32,7 +35,12 @@ func TestPush(t *testing.T) {
 		},
 	}
 
-	err := stor.Push(&metrics[0])
+	go func(){
+		for range stor.backupChan{
+		}
+	}()
+
+	err = stor.Push(&metrics[0])
 	assert.NoError(t, err)
 	assert.Equal(t, stor.ItemsGauge[metrics[0].Name], metrics[0].Value)
 	err = stor.Push(&metrics[1])
@@ -45,4 +53,23 @@ func TestPush(t *testing.T) {
 	assert.NoError(t, err)
 
 	assert.Equal(t, stor.ItemsCounter[metrics[3].Name], []float64{metrics[2].Value, metrics[3].Value})
+}
+
+func TestMar(t *testing.T) {
+	var item Metric
+	item.Name = "test"
+	item.Type = TYPEGAUGE
+	item.Value = 1.11
+
+	jn, err := json.Marshal(&item)
+	assert.NoError(t, err)
+
+	fmt.Println(string(jn))
+}
+
+func TestUnmar(t *testing.T) {
+	var item Metric
+	err := json.Unmarshal([]byte(`{"id":"PollCount","type":"counter"}`), &item)
+	assert.NoError(t, err)
+	fmt.Println(item)
 }

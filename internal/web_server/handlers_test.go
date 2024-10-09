@@ -1,11 +1,15 @@
 package webserver
 
 import (
+	"bytes"
 	"fmt"
+	"log"
 	"net/http"
 	"net/http/httptest"
+	"os"
 	"testing"
 
+	"github.com/Grifonhard/Practicum-metrics/internal/logger"
 	"github.com/Grifonhard/Practicum-metrics/internal/storage"
 	"github.com/gin-gonic/gin"
 	"github.com/stretchr/testify/assert"
@@ -13,7 +17,10 @@ import (
 
 func TestPost(t *testing.T) {
 	//подготовка
-	stor := storage.New()
+	stor, err := storage.New(0, "", false)
+	assert.NoError(t, err)
+
+	go stor.BackupLoop()
 
 	updatePath := "/update"
 
@@ -74,4 +81,41 @@ func TestPost(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestGetJSON(t *testing.T) {
+	//подготовка
+	stor, err := storage.New(0, "", false)
+	assert.NoError(t, err)
+
+	go stor.BackupLoop()
+
+	stor.ItemsCounter = map[string][]float64{
+		"testcounter": {1.11, 2.22},
+	}
+	stor.ItemsGauge = map[string]float64{
+		"testgauge": 3.33,
+	}
+
+	err = logger.Init(os.Stdout,4)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	getJSONPath := "/value/"
+
+	router := gin.Default()
+
+	router.POST("/value/", ReqRespLogger(), GetJSON(stor))
+
+	buf := bytes.NewBuffer([]byte(`{"id":"testgauge","type":"gauge"}`))
+
+	r := httptest.NewRequest(http.MethodPost, getJSONPath, buf)
+	r.Header.Set("Content-Type", "application/json")
+
+	w := httptest.NewRecorder()
+
+	router.ServeHTTP(w, r)
+
+	fmt.Println(w.Body.String())
 }
