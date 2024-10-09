@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"strings"
 
+	"github.com/Grifonhard/Practicum-metrics/internal/logger"
 	"github.com/Grifonhard/Practicum-metrics/internal/storage"
 	"github.com/gin-gonic/gin"
 )
@@ -33,6 +34,7 @@ func Update(stor *storage.MemStorage) gin.HandlerFunc {
 		case METRICTYPEDEFAULT:
 			item, err := storage.ValidateAndConvert(c.Request.Method, c.Param("type"), c.Param("name"), c.Param("value"))
 			if err != nil {
+				logger.Error(fmt.Sprintf("validate error: %s", err.Error()))
 				c.String(http.StatusBadRequest, err.Error())
 				c.Abort()
 				return
@@ -41,7 +43,8 @@ func Update(stor *storage.MemStorage) gin.HandlerFunc {
 			//сохраняем данные
 			err = stor.Push(item)
 			if err != nil {
-				c.String(http.StatusInternalServerError, fmt.Sprintf("fail while push error: %s", err.Error()))
+				logger.Error(fmt.Sprintf("fail while push error: %s", err.Error()))
+				c.String(http.StatusInternalServerError, "fail while push data in db")
 				c.Abort()
 				return
 			}
@@ -62,24 +65,27 @@ func Update(stor *storage.MemStorage) gin.HandlerFunc {
 					break
 				}
 				if err != nil {
+					logger.Error(fmt.Sprintf("fail while decode error: %s", err.Error()))
 					c.Header("Content-Type", "application/json; charset=utf-8")
-					c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+					c.JSON(http.StatusBadRequest, gin.H{"error": "fail unmarshal data"})
 					c.Abort()
 					return
 				}
 
 				err = stor.Push(&item)
 				if err != nil {
+					logger.Error(fmt.Sprintf("fail while push error: %s", err.Error()))
 					c.Header("Content-Type", "application/json; charset=utf-8")
-					c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+					c.JSON(http.StatusInternalServerError, gin.H{"error": "fail push data to db"})
 					c.Abort()
 					return
 				}
 
 				renewValue, err := stor.Get(&item)
 				if err != nil {
+					logger.Error(fmt.Sprintf("fail while get error: %s", err.Error()))
 					c.Header("Content-Type", "application/json; charset=utf-8")
-					c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+					c.JSON(http.StatusInternalServerError, gin.H{"error": "fail while control renew data"})
 					c.Abort()
 					return
 				}
@@ -87,8 +93,9 @@ func Update(stor *storage.MemStorage) gin.HandlerFunc {
 				item.Value = renewValue
 				err = enc.Encode(&item)
 				if err != nil {
+					logger.Error(fmt.Sprintf("fail while get error: %s", err.Error()))
 					c.Header("Content-Type", "application/json; charset=utf-8")
-					c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+					c.JSON(http.StatusInternalServerError, gin.H{"error": "fail while marshal data"})
 					c.Abort()
 					return
 				}
@@ -115,21 +122,24 @@ func GetJSON(stor *storage.MemStorage) gin.HandlerFunc {
 		var item storage.Metric
 
 		if err := c.ShouldBindJSON(&item); err != nil {
+			logger.Error(fmt.Sprintf("fail while decode error: %s", err.Error()))
 			c.Header("Content-Type", "application/json; charset=utf-8")
-			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+			c.JSON(http.StatusBadRequest, gin.H{"error": "fail unmarshal data"})
 			c.Abort()
 			return
 		}
 
 		value, err := stor.Get(&item)
 		if err != nil && err == storage.ErrMetricNoData {
+			logger.Error(fmt.Sprintf("fail while get error: %s", err.Error()))
 			c.Header("Content-Type", "application/json; charset=utf-8")
-			c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
+			c.JSON(http.StatusNotFound, gin.H{"error": "fail get data from db: no data"})
 			c.Abort()
 			return
 		} else if err != nil {
+			logger.Error(fmt.Sprintf("fail while get error: %s", err.Error()))
 			c.Header("Content-Type", "application/json; charset=utf-8")
-			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "fail while get data from db"})
 			c.Abort()
 			return
 		}
@@ -167,7 +177,8 @@ func Get(stor *storage.MemStorage) gin.HandlerFunc {
 				c.Abort()
 				return
 			} else if err != nil {
-				c.String(http.StatusNotFound, err.Error())
+				logger.Error(fmt.Sprintf("fail while get error: %s", err.Error()))
+				c.String(http.StatusNotFound, "data not found")
 				c.Abort()
 				return
 			}
@@ -189,7 +200,8 @@ func List(stor *storage.MemStorage) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		list, err := stor.List()
 		if err != nil {
-			c.String(http.StatusInternalServerError, err.Error())
+			logger.Error(fmt.Sprintf("fail while list error: %s", err.Error()))
+			c.String(http.StatusInternalServerError, "can't get list of metrics")
 			c.Abort()
 			return
 		}
