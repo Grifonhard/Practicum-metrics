@@ -65,20 +65,21 @@ func main() {
 
 	go stor.BackupLoop()
 
-	r := initRouter()
-
-	r.POST("/update", web.ReqRespLogger(), web.DataExtraction(), web.RespEncode(), web.Update(stor))
-	r.POST("/update/:type/:name/:value", web.ReqRespLogger(), web.DataExtraction(), web.Update(stor))
-	r.GET("/value/:type/:name", web.ReqRespLogger(), web.DataExtraction(), web.Get(stor))
-	r.POST("/value/", web.ReqRespLogger(), web.RespEncode(), web.GetJSON(stor))
-	r.GET("/", web.ReqRespLogger(), web.RespEncode(), web.List(stor))
+	r := initRouter(stor)
 
 	fmt.Printf("Server start %s\n", *addr)
 	log.Fatal(r.Run(*addr))
 }
 
-func initRouter() *gin.Engine {
+func initRouter(stor *storage.MemStorage) *gin.Engine {
 	router := gin.Default()
 	router.LoadHTMLGlob("templates/*")
+
+	router.POST("/update", web.ReqRespLogger(), web.DataExtraction(), web.RespEncode(), web.Update(stor))
+	router.POST("/update/:type/:name/:value", web.ReqRespLogger(), web.DataExtraction(), web.Update(stor))
+	router.GET("/value/:type/:name", web.ReqRespLogger(), web.DataExtraction(), web.Get(stor))
+	router.POST("/value/", web.ReqRespLogger(), web.RespEncode(), web.GetJSON(stor))
+	router.GET("/", web.ReqRespLogger(), web.RespEncode(), web.List(stor))
+
 	return router
 }
