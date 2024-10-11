@@ -25,7 +25,7 @@ type CFG struct {
 	StoreInterval   *int    `env:"STORE_INTERVAL"`
 	FileStoragePath *string `env:"FILE_STORAGE_PATH"`
 	Restore         *bool   `env:"RESTORE"`
-	DatabaseDsn		*string `env:"DATABASE_DSN"`
+	DatabaseDsn     *string `env:"DATABASE_DSN"`
 }
 
 func main() {
@@ -33,7 +33,7 @@ func main() {
 	storeInterval := flag.Int("i", DEFAULTSTOREINTERVAL, "backup interval")
 	fileStoragePath := flag.String("f", "", "file storage path")
 	restore := flag.Bool("r", DEFAULTRESTORE, "restore from backup")
-	databaseDsn := flag.String("d","","database connect")
+	databaseDsn := flag.String("d", "", "database connect")
 
 	flag.Parse()
 
@@ -71,7 +71,11 @@ func main() {
 
 	var db *psql.DB
 	if *databaseDsn != "" {
+		fmt.Printf("Database DSN: %s\n", *databaseDsn)
 		db, err = psql.ConnectDB(*databaseDsn)
+		if err != nil {
+			log.Fatal(err)
+		}
 	}
 
 	go stor.BackupLoop()
