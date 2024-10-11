@@ -219,10 +219,10 @@ func PingDB(db *psql.DB) gin.HandlerFunc {
 		err := db.Ping()
 		if err != nil {
 			logger.Error(fmt.Sprintf("fail ping db error: %s", err.Error()))
-			c.String(http.StatusInternalServerError, "fail ping db")
+			c.String(http.StatusInternalServerError, "not pong")
 			c.Abort()
 			return
 		}
-		c.String(http.StatusOK, )
+		c.String(http.StatusOK, "pong")
 	}
 }
