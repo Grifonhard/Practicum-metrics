@@ -6,6 +6,7 @@ import (
 	"log"
 	"os"
 
+	"github.com/Grifonhard/Practicum-metrics/internal/drivers/psql"
 	"github.com/Grifonhard/Practicum-metrics/internal/logger"
 	"github.com/Grifonhard/Practicum-metrics/internal/storage"
 	web "github.com/Grifonhard/Practicum-metrics/internal/web_server"
@@ -24,6 +25,7 @@ type CFG struct {
 	StoreInterval   *int    `env:"STORE_INTERVAL"`
 	FileStoragePath *string `env:"FILE_STORAGE_PATH"`
 	Restore         *bool   `env:"RESTORE"`
+	DatabaseDsn     *string `env:"DATABASE_DSN"`
 }
 
 func main() {
@@ -31,6 +33,7 @@ func main() {
 	storeInterval := flag.Int("i", DEFAULTSTOREINTERVAL, "backup interval")
 	fileStoragePath := flag.String("f", "", "file storage path")
 	restore := flag.Bool("r", DEFAULTRESTORE, "restore from backup")
+	databaseDsn := flag.String("d", "", "database connect")
 
 	flag.Parse()
 
@@ -52,6 +55,9 @@ func main() {
 	if cfg.Restore != nil {
 		restore = cfg.Restore
 	}
+	if cfg.DatabaseDsn != nil {
+		databaseDsn = cfg.DatabaseDsn
+	}
 
 	err = logger.Init(os.Stdout, 4)
 	if err != nil {
@@ -63,15 +69,24 @@ func main() {
 		log.Fatal(err)
 	}
 
+	var db *psql.DB
+	if *databaseDsn != "" {
+		fmt.Printf("Database DSN: %s\n", *databaseDsn)
+		db, err = psql.ConnectDB(*databaseDsn)
+		if err != nil {
+			log.Fatal(err)
+		}
+	}
+
 	go stor.BackupLoop()
 
-	r := initRouter(stor)
+	r := initRouter(stor, db)
 
 	fmt.Printf("Server start %s\n", *addr)
 	log.Fatal(r.Run(*addr))
 }
 
-func initRouter(stor *storage.MemStorage) *gin.Engine {
+func initRouter(stor *storage.MemStorage, db *psql.DB) *gin.Engine {
 	router := gin.Default()
 	router.LoadHTMLGlob("templates/*")
 
@@ -80,6 +95,9 @@ func initRouter(stor *storage.MemStorage) *gin.Engine {
 	router.GET("/value/:type/:name", web.ReqRespLogger(), web.DataExtraction(), web.Get(stor))
 	router.POST("/value/", web.ReqRespLogger(), web.RespEncode(), web.GetJSON(stor))
 	router.GET("/", web.ReqRespLogger(), web.RespEncode(), web.List(stor))
+	if db != nil {
+		router.GET("/ping", web.PingDB(db))
+	}
 
 	return router
 }
