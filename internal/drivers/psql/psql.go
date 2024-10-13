@@ -60,7 +60,19 @@ func (db *DB) PushReplace(metric, metricName string, value float64) error {
 		`WHERE ` + COLUMNMETRIC + ` = $2;`
 
 	// pgx НЕ ПОДДЕРЖИВАЕТ Value()
-	_, err := db.Exec(query, value, ms.MetricType+METRICSEPARATOR+ms.MetricName)
+	result, err := db.Exec(query, value, ms.MetricType+METRICSEPARATOR+ms.MetricName)
+	if err != nil {
+		return err
+	}
+	rowsAffected, err := result.RowsAffected()
+	if err != nil {
+		return err
+	}
+
+	if rowsAffected == 0 {
+		insertQuery := `INSERT INTO ` + TABLENAME + ` (` + COLUMNMETRIC + `, ` + COLUMNMETRICVALUE + `) VALUES ($1, $2);`
+		_, err = db.Exec(insertQuery, ms.MetricType+METRICSEPARATOR+ms.MetricName, value)
+	}
 	return err
 }
 
