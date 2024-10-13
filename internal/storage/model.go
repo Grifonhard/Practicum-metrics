@@ -5,6 +5,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/Grifonhard/Practicum-metrics/internal/drivers/psql"
 	"github.com/Grifonhard/Practicum-metrics/internal/storage/fileio"
 )
 
@@ -20,6 +21,7 @@ type Stor interface {
 }
 
 type MemStorage struct {
+	DB *psql.DB
 	ItemsGauge   map[string]float64
 	ItemsCounter map[string][]float64
 	backupChan   chan struct{}

@@ -8,11 +8,12 @@ import (
 	"sync"
 	"time"
 
+	"github.com/Grifonhard/Practicum-metrics/internal/drivers/psql"
 	"github.com/Grifonhard/Practicum-metrics/internal/logger"
 	"github.com/Grifonhard/Practicum-metrics/internal/storage/fileio"
 )
 
-func New(intervalBackup int, filepathBackup string, restoreFromBackup bool) (*MemStorage, error) {
+func New(intervalBackup int, filepathBackup string, restoreFromBackup bool, db *psql.DB) (*MemStorage, error) {
 	var storage MemStorage
 
 	if intervalBackup != 0 {
@@ -29,7 +30,14 @@ func New(intervalBackup int, filepathBackup string, restoreFromBackup bool) (*Me
 		return nil, err
 	}
 
-	if restoreFromBackup {
+	if db != nil {
+		storage.DB = db
+
+		err = db.CreateMetricsTable()
+		if err != nil {
+			return nil, err
+		}
+	} else if restoreFromBackup {
 		storage.ItemsGauge, storage.ItemsCounter, err = storage.backupFile.Read()
 		if err != nil {
 			return nil, err
@@ -43,19 +51,40 @@ func New(intervalBackup int, filepathBackup string, restoreFromBackup bool) (*Me
 }
 
 func (ms *MemStorage) Push(metric *Metric) error {
-	ms.mu.Lock()
-	if metric == nil {
-		return ErrMetricEmpty
-	}
-	switch metric.Type {
-	case TYPEGAUGE:
-		ms.ItemsGauge[metric.Name] = metric.Value
-	case TYPECOUNTER:
-		ms.ItemsCounter[metric.Name] = append(ms.ItemsCounter[metric.Name], metric.Value)
+	switch ms.DB {
+	case nil:
+		ms.mu.Lock()
+		if metric == nil {
+			return ErrMetricEmpty
+		}
+		switch metric.Type {
+		case TYPEGAUGE:
+			ms.ItemsGauge[metric.Name] = metric.Value
+		case TYPECOUNTER:
+			ms.ItemsCounter[metric.Name] = append(ms.ItemsCounter[metric.Name], metric.Value)
+		default:
+			return ErrMetricTypeUnknown
+		}
+		ms.mu.Unlock()
 	default:
-		return ErrMetricTypeUnknown
+		if metric == nil {
+			return ErrMetricEmpty
+		}
+		switch metric.Type {
+		case TYPEGAUGE:
+			err := ms.DB.PushReplace(metric.Type, metric.Name, metric.Value)
+			if err != nil {
+				return err
+			}
+		case TYPECOUNTER:
+			err := ms.DB.PushAdd(metric.Type, metric.Name, metric.Value)
+			if err != nil {
+				return err
+			}
+		default:
+			return ErrMetricTypeUnknown
+		}
 	}
-	ms.mu.Unlock()
 	if ms.backupChan != nil {
 		ms.backupChan <- struct{}{}
 	}
@@ -63,42 +92,80 @@ func (ms *MemStorage) Push(metric *Metric) error {
 }
 
 func (ms *MemStorage) Get(metric *Metric) (float64, error) {
-	ms.mu.Lock()
-	defer ms.mu.Unlock()
-	if metric == nil {
-		return 0, ErrMetricEmpty
-	}
-	switch metric.Type {
-	case TYPEGAUGE:
-		result, ok := ms.ItemsGauge[metric.Name]
-		if !ok {
-			return 0, ErrMetricNoData
+	switch ms.DB {
+	case nil:
+		ms.mu.Lock()
+		defer ms.mu.Unlock()
+		if metric == nil {
+			return 0, ErrMetricEmpty
 		}
-		return result, nil
-	case TYPECOUNTER:
-		values, ok := ms.ItemsCounter[metric.Name]
-		if !ok {
-			return 0, ErrMetricNoData
+		switch metric.Type {
+		case TYPEGAUGE:
+			result, ok := ms.ItemsGauge[metric.Name]
+			if !ok {
+				return 0, ErrMetricNoData
+			}
+			return result, nil
+		case TYPECOUNTER:
+			values, ok := ms.ItemsCounter[metric.Name]
+			if !ok {
+				return 0, ErrMetricNoData
+			}
+			var result float64
+			for _, v := range values {
+				result += v
+			}
+			return result, nil
+		default:
+			return 0, ErrMetricTypeUnknown
 		}
-		var result float64
-		for _, v := range values {
-			result += v
-		}
-		return result, nil
 	default:
-		return 0, ErrMetricTypeUnknown
+		if metric == nil {
+			return 0, ErrMetricEmpty
+		}
+		switch metric.Type {
+		case TYPEGAUGE:
+			return ms.DB.GetOneValue(metric.Type, metric.Name)
+		case TYPECOUNTER:
+			values, err := ms.DB.GetArrayValues(metric.Type, metric.Name)
+			if err != nil && err == psql.ErrNoData {
+				return 0, ErrMetricNoData
+			} else if err != nil {
+				return 0, fmt.Errorf("error while get value from postgres: %v", err)
+			}
+			var result float64
+			for _, v := range values {
+				result += v
+			}
+			return result, nil
+		default:
+			return 0, ErrMetricTypeUnknown
+		}
 	}
 }
 
 func (ms *MemStorage) List() ([]string, error) {
+	var mapGauge map[string]float64
+	var mapCounter map[string][]float64
+	var err error
+	switch ms.DB {
+	case nil:
+		mapGauge = ms.ItemsGauge
+		mapCounter = ms.ItemsCounter
+	default:
+		mapGauge, mapCounter, err = ms.DB.List(TYPEGAUGE, TYPECOUNTER)
+		if err != nil {
+			return nil, err
+		}
+	}
 	ms.mu.Lock()
 	defer ms.mu.Unlock()
-	list := make([]string, len(ms.ItemsCounter)+len(ms.ItemsCounter))
+	list := make([]string, len(mapGauge)+len(mapCounter))
 	var listMu sync.Mutex
 	var wg sync.WaitGroup
 	wg.Add(2)
-	go ms.listGauge(&list, &wg, &listMu)
-	go ms.listCounter(&list, &wg, &listMu)
+	go listGauge(mapGauge, &list, &wg, &listMu)
+	go listCounter(len(mapGauge), mapCounter, &list, &wg, &listMu)
 
 	wg.Wait()
 
@@ -153,10 +220,10 @@ func (ms *MemStorage) BackupLoop() {
 	}
 }
 
-func (ms *MemStorage) listGauge(list *[]string, wg *sync.WaitGroup, mu *sync.Mutex) {
+func listGauge(gauge map[string]float64, list *[]string, wg *sync.WaitGroup, mu *sync.Mutex) {
 	defer wg.Done()
 	var i int
-	for n, v := range ms.ItemsGauge {
+	for n, v := range gauge {
 		mu.Lock()
 		(*list)[i] = fmt.Sprintf("%s: %f", n, v)
 		mu.Unlock()
@@ -164,10 +231,10 @@ func (ms *MemStorage) listGauge(list *[]string, wg *sync.WaitGroup, mu *sync.Mut
 	}
 }
 
-func (ms *MemStorage) listCounter(list *[]string, wg *sync.WaitGroup, mu *sync.Mutex) {
+func listCounter(lenGauge int, counter map[string][]float64, list *[]string, wg *sync.WaitGroup, mu *sync.Mutex) {
 	defer wg.Done()
-	i := len(ms.ItemsGauge)
-	for n, ves := range ms.ItemsCounter {
+	i := lenGauge
+	for n, ves := range counter {
 		var values string
 		for _, v := range ves {
 			values = fmt.Sprintf("%s, %s", values, fmt.Sprintf("%f", v))
