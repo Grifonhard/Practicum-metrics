@@ -73,7 +73,7 @@ func main() {
 		}
 	}
 
-	stor, err := storage.New(*storeInterval, *fileStoragePath, *restore)
+	stor, err := storage.New(*storeInterval, *fileStoragePath, *restore, db)
 	if err != nil {
 		log.Fatal(err)
 	}

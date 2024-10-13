@@ -17,7 +17,7 @@ import (
 
 func TestPost(t *testing.T) {
 	//подготовка
-	stor, err := storage.New(0, "", false)
+	stor, err := storage.New(0, "", false, nil)
 	assert.NoError(t, err)
 
 	go stor.BackupLoop()
@@ -85,7 +85,7 @@ func TestPost(t *testing.T) {
 
 func TestGetJSON(t *testing.T) {
 	//подготовка
-	stor, err := storage.New(0, "", false)
+	stor, err := storage.New(0, "", false, nil)
 	assert.NoError(t, err)
 
 	go stor.BackupLoop()

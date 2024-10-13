@@ -9,7 +9,7 @@ import (
 )
 
 func TestPush(t *testing.T) {
-	stor, err := New(0, "", false)
+	stor, err := New(0, "", false,nil)
 	assert.NoError(t, err)
 
 	metrics := []Metric{
