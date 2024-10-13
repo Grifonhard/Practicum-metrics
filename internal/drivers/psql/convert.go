@@ -12,8 +12,8 @@ const (
 )
 
 type Metric struct {
-	MetricS	MetricString
-	Value	float64
+	MetricS MetricString
+	Value   float64
 }
 
 type MetricString struct {

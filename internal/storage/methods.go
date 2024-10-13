@@ -29,7 +29,8 @@ func New(intervalBackup int, filepathBackup string, restoreFromBackup bool) (*Me
 		return nil, err
 	}
 
-	if restoreFromBackup {
+	if 
+	else if restoreFromBackup {
 		storage.ItemsGauge, storage.ItemsCounter, err = storage.backupFile.Read()
 		if err != nil {
 			return nil, err

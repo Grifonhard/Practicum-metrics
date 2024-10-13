@@ -8,10 +8,10 @@ import (
 )
 
 const (
-	TABLENAME = "metrics"
-	COLUMNMETRIC = "metric"
-	COLUMNMETRICTYPE = "TEXT"
-	COLUMNMETRICVALUE = "value"
+	TABLENAME             = "metrics"
+	COLUMNMETRIC          = "metric"
+	COLUMNMETRICTYPE      = "TEXT"
+	COLUMNMETRICVALUE     = "value"
 	COLUMNMETRICVALUETYPE = "DOUBLE PRECISION"
 )
 
@@ -41,13 +41,13 @@ func (db *DB) CreateMetricsTable() error {
 	query := fmt.Sprintf(`CREATE TABLE IF NOT EXISTS %s (
 							%s %s,
 							%s %s
-						);`, 
-						TABLENAME,
-							COLUMNMETRIC, COLUMNMETRICTYPE,
-							COLUMNMETRICVALUE, COLUMNMETRICVALUETYPE)
+						);`,
+		TABLENAME,
+		COLUMNMETRIC, COLUMNMETRICTYPE,
+		COLUMNMETRICVALUE, COLUMNMETRICVALUETYPE)
 
 	_, err := db.Exec(query)
-	return err		
+	return err
 }
 
 func (db *DB) PushReplace(metric, metricName string, value float64) error {
@@ -56,8 +56,8 @@ func (db *DB) PushReplace(metric, metricName string, value float64) error {
 		MetricName: metricName,
 	}
 	query := `UPDATE ` + TABLENAME + ` ` +
-				`SET ` + COLUMNMETRICVALUE + ` = $1 ` +
-				`WHERE ` + COLUMNMETRIC + ` = $2;`
+		`SET ` + COLUMNMETRICVALUE + ` = $1 ` +
+		`WHERE ` + COLUMNMETRIC + ` = $2;`
 
 	_, err := db.Exec(query, value, ms)
 	return err
@@ -68,10 +68,10 @@ func (db *DB) PushAdd(metric, metricName string, value float64) error {
 		MetricType: metric,
 		MetricName: metricName,
 	}
-	query := `INSERT INTO ` + TABLENAME + 
-				`(` + COLUMNMETRIC + `, ` + COLUMNMETRICVALUE + `) ` +
-				`VALUES ($1, $2);`
-	
+	query := `INSERT INTO ` + TABLENAME +
+		`(` + COLUMNMETRIC + `, ` + COLUMNMETRICVALUE + `) ` +
+		`VALUES ($1, $2);`
+
 	_, err := db.Exec(query, ms, value)
 	return err
 }
@@ -82,10 +82,10 @@ func (db *DB) GetOneValue(metric, metricName string) (float64, error) {
 		MetricName: metricName,
 	}
 	query := `SELECT ` + COLUMNMETRICVALUE + ` ` +
-				`FROM ` + TABLENAME  + ` ` +
-				`WHERE ` + COLUMNMETRIC	+ `=$1;`		
+		`FROM ` + TABLENAME + ` ` +
+		`WHERE ` + COLUMNMETRIC + `=$1;`
 
-	row := db.QueryRow(query,ms)
+	row := db.QueryRow(query, ms)
 	var value sql.NullFloat64
 
 	err := row.Scan(&value)
@@ -104,10 +104,10 @@ func (db *DB) GetArrayValues(metric, metricName string) (values []float64, err e
 		MetricType: metric,
 		MetricName: metricName,
 	}
-	query := `SELECT ` + COLUMNMETRICVALUE + ` ` + 
-				`FROM ` + TABLENAME + ` ` +
-				`WHERE ` + COLUMNMETRIC + `=$1;`
-	
+	query := `SELECT ` + COLUMNMETRICVALUE + ` ` +
+		`FROM ` + TABLENAME + ` ` +
+		`WHERE ` + COLUMNMETRIC + `=$1;`
+
 	rows, err := db.Query(query, ms)
 	if err != nil {
 		return nil, err
@@ -138,7 +138,7 @@ func (db *DB) List(metricOneValue, metricArrayValues string) (map[string]float64
 	typeValues := make(map[string][]float64)
 
 	query := `SELECT * FROM ` + TABLENAME + `;`
-	
+
 	rows, err := db.Query(query)
 	if err != nil {
 		return nil, nil, err
