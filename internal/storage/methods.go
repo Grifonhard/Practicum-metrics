@@ -51,9 +51,9 @@ func New(intervalBackup int, filepathBackup string, restoreFromBackup bool, db *
 }
 
 func (ms *MemStorage) Push(metric *Metric) error {
-	ms.mu.Lock()
 	switch ms.DB {
 	case nil:
+		ms.mu.Lock()
 		if metric == nil {
 			return ErrMetricEmpty
 		}
@@ -65,6 +65,7 @@ func (ms *MemStorage) Push(metric *Metric) error {
 		default:
 			return ErrMetricTypeUnknown
 		}
+		ms.mu.Unlock()
 	default:
 		if metric == nil {
 			return ErrMetricEmpty
@@ -84,7 +85,6 @@ func (ms *MemStorage) Push(metric *Metric) error {
 			return ErrMetricTypeUnknown
 		}
 	}
-	ms.mu.Unlock()
 	if ms.backupChan != nil {
 		ms.backupChan <- struct{}{}
 	}
@@ -92,10 +92,10 @@ func (ms *MemStorage) Push(metric *Metric) error {
 }
 
 func (ms *MemStorage) Get(metric *Metric) (float64, error) {
-	ms.mu.Lock()
-	defer ms.mu.Unlock()
 	switch ms.DB {
 	case nil:
+		ms.mu.Lock()
+		defer ms.mu.Unlock()
 		if metric == nil {
 			return 0, ErrMetricEmpty
 		}
@@ -148,8 +148,6 @@ func (ms *MemStorage) List() ([]string, error) {
 	var mapGauge map[string]float64
 	var mapCounter map[string][]float64
 	var err error
-	ms.mu.Lock()
-	defer ms.mu.Unlock()
 	switch ms.DB {
 	case nil:
 		mapGauge = ms.ItemsGauge
@@ -160,6 +158,8 @@ func (ms *MemStorage) List() ([]string, error) {
 			return nil, err
 		}
 	}
+	ms.mu.Lock()
+	defer ms.mu.Unlock()
 	list := make([]string, len(mapGauge)+len(mapCounter))
 	var listMu sync.Mutex
 	var wg sync.WaitGroup
