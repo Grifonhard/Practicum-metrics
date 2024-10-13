@@ -110,6 +110,54 @@ func Update(stor *storage.MemStorage) gin.HandlerFunc {
 	}
 }
 
+func Updates(stor *storage.MemStorage) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		var buf bytes.Buffer
+		_, err := buf.ReadFrom(c.Request.Body)
+		if err != nil {
+			logger.Error(fmt.Sprintf("fail while read to buffer error: %s", err.Error()))
+			c.Header("Content-Type", "application/json; charset=utf-8")
+			c.JSON(http.StatusBadRequest, gin.H{"error": "fail read data"})
+			c.Abort()
+			return
+		}
+		var items []storage.Metric
+		err = json.Unmarshal(buf.Bytes(), &items)
+		if err != nil {
+			logger.Error(fmt.Sprintf("fail while decode error: %s", err.Error()))
+			c.Header("Content-Type", "application/json; charset=utf-8")
+			c.JSON(http.StatusBadRequest, gin.H{"error": "fail unmarshal data"})
+			c.Abort()
+			return
+		}
+
+		for i, item := range items {
+			fmt.Printf("item updates: %v\n", item)
+			err = stor.Push(&item)
+			if err != nil {
+				logger.Error(fmt.Sprintf("fail while push error: %s", err.Error()))
+				c.Header("Content-Type", "application/json; charset=utf-8")
+				c.JSON(http.StatusInternalServerError, gin.H{"error": "fail push data to db"})
+				c.Abort()
+				return
+			}
+
+			renewValue, err := stor.Get(&item)
+			if err != nil {
+				logger.Error(fmt.Sprintf("fail while get error: %s", err.Error()))
+				c.Header("Content-Type", "application/json; charset=utf-8")
+				c.JSON(http.StatusInternalServerError, gin.H{"error": "fail while control renew data"})
+				c.Abort()
+				return
+			}
+
+			fmt.Printf("renew value: %f\n", renewValue)
+			items[i].Value = renewValue
+		}
+		c.JSON(http.StatusOK, items)
+	}
+}
+
 func GetJSON(stor *storage.MemStorage) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		if !strings.Contains(c.Request.Header.Get("Content-Type"), "application/json") {
