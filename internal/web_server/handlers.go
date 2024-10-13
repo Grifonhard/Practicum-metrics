@@ -130,8 +130,9 @@ func Updates(stor *storage.MemStorage) gin.HandlerFunc {
 			c.Abort()
 			return
 		}
-		
-		for i, item := range items{
+
+		for i, item := range items {
+			fmt.Printf("item updates: %v\n", item)
 			err = stor.Push(&item)
 			if err != nil {
 				logger.Error(fmt.Sprintf("fail while push error: %s", err.Error()))
@@ -140,7 +141,7 @@ func Updates(stor *storage.MemStorage) gin.HandlerFunc {
 				c.Abort()
 				return
 			}
-	
+
 			renewValue, err := stor.Get(&item)
 			if err != nil {
 				logger.Error(fmt.Sprintf("fail while get error: %s", err.Error()))
@@ -149,7 +150,8 @@ func Updates(stor *storage.MemStorage) gin.HandlerFunc {
 				c.Abort()
 				return
 			}
-			
+
+			fmt.Printf("renew value: %f\n", renewValue)
 			items[i].Value = renewValue
 		}
 		c.JSON(http.StatusOK, items)
