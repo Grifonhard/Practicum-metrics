@@ -21,35 +21,55 @@ type Metrics struct {
 	Value *float64 `json:"value,omitempty"` // значение метрики в случае передачи gauge
 }
 
-func SendMetric(url string, gen *metgen.MetGen) {
+const (
+	// для /update
+	SENDSUBSEQUENCE = "subsequence mode"
+	// для /updates
+	SENDARRAY = "array mode"
+)
+
+func SendMetric(url string, gen *metgen.MetGen, sendMethod string) {
 	ctx, cancel := context.WithCancel(context.Background())
 	ch := make(chan *Metrics)
 
-	//подготовка данных
+	// подготовка данных
 	var buf bytes.Buffer
 	gauge, counter, err := gen.Collect()
 	if err != nil {
 		fmt.Printf("fail collect metrics: %s", err.Error())
 	}
-	enc := json.NewEncoder(&buf)	
+	enc := json.NewEncoder(&buf)
+	// используется только для массива итемов
+	var items []*Metrics	
 
 	go prepareDataToSend(gauge, counter, ch, cancel)
 	for {
 		select {
 		case item := <-ch:
-			err = enc.Encode(item)
-			if err != nil {
-				fmt.Printf("fail encode metrics: %s", err.Error())
+			switch sendMethod{
+			case SENDSUBSEQUENCE:
+				err = enc.Encode(item)
+				if err != nil {
+					fmt.Printf("fail encode metrics: %s", err.Error())
+				}
+			case SENDARRAY:
+				items = append(items, item)
 			}
 		case <-ctx.Done():
 			close(ch)
+			if sendMethod == SENDARRAY {
+				err = enc.Encode(items)
+				if err != nil {
+					fmt.Printf("fail encode metrics: %s", err.Error())
+				}
+			}
 			//сжимаем данные
 			compressed, err := compressBeforeSend(&buf)
 			if err != nil {
 				fmt.Printf("fail while compress: %s", err.Error())
 				cancel()
 				return
-			}
+			}			
 			//подготовка реквеста и клиента
 			req, err := http.NewRequest(http.MethodPost, url, compressed)
 			if err != nil {

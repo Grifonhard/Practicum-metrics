@@ -59,7 +59,7 @@ func main() {
 				fmt.Printf("Fail renew metrics: %s\n", err.Error())
 			}
 		case <-timerReport.C:
-			go webclient.SendMetric(fmt.Sprintf("http://%s/update", *address), generator)
+			go webclient.SendMetric(fmt.Sprintf("http://%s/updates", *address), generator, webclient.SENDARRAY)
 		}
 	}
 }
