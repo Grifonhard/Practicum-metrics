@@ -72,9 +72,15 @@ func (ms *MemStorage) Push(metric *Metric) error {
 		}
 		switch metric.Type {
 		case TYPEGAUGE:
-			ms.DB.PushReplace(metric.Type, metric.Name, metric.Value)
+			err := ms.DB.PushReplace(metric.Type, metric.Name, metric.Value)
+			if err != nil {
+				return err
+			}
 		case TYPECOUNTER:
-			ms.DB.PushAdd(metric.Type, metric.Name, metric.Value)
+			err := ms.DB.PushAdd(metric.Type, metric.Name, metric.Value)
+			if err != nil {
+				return err
+			}
 		default:
 			return ErrMetricTypeUnknown
 		}

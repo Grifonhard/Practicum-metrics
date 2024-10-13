@@ -59,7 +59,8 @@ func (db *DB) PushReplace(metric, metricName string, value float64) error {
 		`SET ` + COLUMNMETRICVALUE + ` = $1 ` +
 		`WHERE ` + COLUMNMETRIC + ` = $2;`
 
-	_, err := db.Exec(query, value, ms)
+	// pgx НЕ ПОДДЕРЖИВАЕТ Value()
+	_, err := db.Exec(query, ms.MetricType+METRICSEPARATOR+ms.MetricName, ms)
 	return err
 }
 
@@ -72,7 +73,8 @@ func (db *DB) PushAdd(metric, metricName string, value float64) error {
 		`(` + COLUMNMETRIC + `, ` + COLUMNMETRICVALUE + `) ` +
 		`VALUES ($1, $2);`
 
-	_, err := db.Exec(query, ms, value)
+	// pgx НЕ ПОДДЕРЖИВАЕТ Value()
+	_, err := db.Exec(query, ms.MetricType+METRICSEPARATOR+ms.MetricName, value)
 	return err
 }
 
