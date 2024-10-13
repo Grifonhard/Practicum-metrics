@@ -39,7 +39,7 @@ func (db *DB) Close() error {
 
 func (db *DB) CreateMetricsTable() error {
 	query := fmt.Sprintf(`CREATE TABLE IF NOT EXISTS %s (
-							%s %s PRIMARY KEY,
+							%s %s,
 							%s %s
 						);`,
 		TABLENAME,
