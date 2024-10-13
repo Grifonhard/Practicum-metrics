@@ -92,7 +92,7 @@ func initRouter(stor *storage.MemStorage, db *psql.DB) *gin.Engine {
 
 	router.POST("/update", web.ReqRespLogger(), web.DataExtraction(), web.RespEncode(), web.Update(stor))
 	router.POST("/update/:type/:name/:value", web.ReqRespLogger(), web.DataExtraction(), web.Update(stor))
-	router.POST("/updates/", web.ReqRespLogger(), web.DataExtraction(), web.Update(stor))
+	router.POST("/updates/", web.ReqRespLogger(), web.DataExtraction(), web.Updates(stor))
 	router.GET("/value/:type/:name", web.ReqRespLogger(), web.DataExtraction(), web.Get(stor))
 	router.POST("/value/", web.ReqRespLogger(), web.RespEncode(), web.GetJSON(stor))
 	router.GET("/", web.ReqRespLogger(), web.RespEncode(), web.List(stor))
