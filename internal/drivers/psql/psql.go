@@ -87,7 +87,8 @@ func (db *DB) GetOneValue(metric, metricName string) (float64, error) {
 		`FROM ` + TABLENAME + ` ` +
 		`WHERE ` + COLUMNMETRIC + `=$1;`
 
-	row := db.QueryRow(query, ms)
+	// pgx НЕ ПОДДЕРЖИВАЕТ Value()
+	row := db.QueryRow(query, ms.MetricType+METRICSEPARATOR+ms.MetricName)
 	var value sql.NullFloat64
 
 	err := row.Scan(&value)
@@ -110,7 +111,8 @@ func (db *DB) GetArrayValues(metric, metricName string) (values []float64, err e
 		`FROM ` + TABLENAME + ` ` +
 		`WHERE ` + COLUMNMETRIC + `=$1;`
 
-	rows, err := db.Query(query, ms)
+	// pgx НЕ ПОДДЕРЖИВАЕТ Value()
+	rows, err := db.Query(query, ms.MetricType+METRICSEPARATOR+ms.MetricName)
 	if err != nil {
 		return nil, err
 	}
