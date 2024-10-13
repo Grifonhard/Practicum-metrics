@@ -64,11 +64,6 @@ func main() {
 		log.Fatal(err)
 	}
 
-	stor, err := storage.New(*storeInterval, *fileStoragePath, *restore)
-	if err != nil {
-		log.Fatal(err)
-	}
-
 	var db *psql.DB
 	if *databaseDsn != "" {
 		fmt.Printf("Database DSN: %s\n", *databaseDsn)
@@ -76,6 +71,11 @@ func main() {
 		if err != nil {
 			log.Fatal(err)
 		}
+	}
+
+	stor, err := storage.New(*storeInterval, *fileStoragePath, *restore)
+	if err != nil {
+		log.Fatal(err)
 	}
 
 	go stor.BackupLoop()
