@@ -7,7 +7,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"io"
 	"net/http"
 	"sync"
 	"time"
@@ -25,7 +24,7 @@ type Metrics struct {
 
 const (
 	SENDSUBSEQUENCE = "subsequence mode" // для /update
-	SENDARRAY = "array mode" // для /updates
+	SENDARRAY       = "array mode"       // для /updates
 )
 
 // если неудачно
@@ -46,13 +45,13 @@ func SendMetric(url string, gen *metgen.MetGen, sendMethod string) {
 	}
 	enc := json.NewEncoder(&buf)
 	// используется только для массива итемов
-	var items []*Metrics	
+	var items []*Metrics
 
 	go prepareDataToSend(gauge, counter, ch, cancel)
 	for {
 		select {
 		case item := <-ch:
-			switch sendMethod{
+			switch sendMethod {
 			case SENDSUBSEQUENCE:
 				err = enc.Encode(item)
 				if err != nil {
@@ -75,7 +74,7 @@ func SendMetric(url string, gen *metgen.MetGen, sendMethod string) {
 				fmt.Printf("fail while compress: %s", err.Error())
 				cancel()
 				return
-			}			
+			}
 			//подготовка реквеста и клиента
 			req, err := http.NewRequest(http.MethodPost, url, compressed)
 			if err != nil {
@@ -84,28 +83,25 @@ func SendMetric(url string, gen *metgen.MetGen, sendMethod string) {
 				return
 			}
 			req.Header.Set("Content-Type", "application/json")
-			req.Header.Set("Content-Encoding","gzip")
+			req.Header.Set("Content-Encoding", "gzip")
 			//какого-то хрена заголовок Accept-Encoding gzip устанавливается автоматически в клиенте по умолчанию
 			cl := &http.Client{
 				Timeout: time.Minute,
 			}
 
 			var resp *http.Response
-
+			var errCollect []error
 			for i := 0; i < MAXRETRIES; i++ {
 				resp, err = cl.Do(req)
 				if err != nil {
-					if errors.Is(err, io.EOF) {
-						time.Sleep(time.Second + RETRYINTERVALINCREASE*time.Duration(i))
-						continue
-					}
-					break
+					errCollect = append(errCollect, err)
+					continue
 				} else {
 					break
 				}
 			}
-			if err != nil {
-				fmt.Printf("fail while sending metrics: %s", err.Error())
+			if errCollect != nil {
+				fmt.Printf("fail while sending metrics: %s", errors.Join(errCollect...).Error())
 				return
 			}
 			defer resp.Body.Close()
@@ -142,14 +138,14 @@ func prepareDataToSend(g map[string]float64, c map[string]int64, ch chan *Metric
 			ch <- &metric
 		}
 	}()
-	wg.Wait()	
+	wg.Wait()
 	cancel()
 }
 
 func compressBeforeSend(b *bytes.Buffer) (compressed *bytes.Buffer, err error) {
 	compressed = new(bytes.Buffer)
 	writer := gzip.NewWriter(compressed)
-	
+
 	_, err = writer.Write(b.Bytes())
 	if err != nil {
 		return nil, err
