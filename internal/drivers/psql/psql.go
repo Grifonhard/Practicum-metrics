@@ -19,7 +19,7 @@ const (
 	COLUMNMETRICVALUETYPE = "DOUBLE PRECISION"
 )
 
-// если неудачное
+// если неудачно
 const (
 	MAXRETRIES            = 3               // Максимальное количество попыток
 	RETRYINTERVALINCREASE = 2 * time.Second // на столько растёт интервал между попытками, начиная с 1 секунды

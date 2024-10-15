@@ -5,7 +5,9 @@ import (
 	"compress/gzip"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
+	"io"
 	"net/http"
 	"sync"
 	"time"
@@ -22,10 +24,14 @@ type Metrics struct {
 }
 
 const (
-	// для /update
-	SENDSUBSEQUENCE = "subsequence mode"
-	// для /updates
-	SENDARRAY = "array mode"
+	SENDSUBSEQUENCE = "subsequence mode" // для /update
+	SENDARRAY = "array mode" // для /updates
+)
+
+// если неудачно
+const (
+	MAXRETRIES            = 3               // Максимальное количество попыток
+	RETRYINTERVALINCREASE = 2 * time.Second // на столько растёт интервал между попытками, начиная с 1 секунды
 )
 
 func SendMetric(url string, gen *metgen.MetGen, sendMethod string) {
@@ -84,7 +90,20 @@ func SendMetric(url string, gen *metgen.MetGen, sendMethod string) {
 				Timeout: time.Minute,
 			}
 
-			resp, err := cl.Do(req)
+			var resp *http.Response
+
+			for i := 0; i < MAXRETRIES; i++ {
+				resp, err = cl.Do(req)
+				if err != nil {
+					if errors.Is(err, io.EOF) {
+						time.Sleep(time.Second + RETRYINTERVALINCREASE*time.Duration(i))
+						continue
+					}
+					break
+				} else {
+					break
+				}
+			}
 			if err != nil {
 				fmt.Printf("fail while sending metrics: %s", err.Error())
 				return
