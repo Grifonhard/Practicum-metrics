@@ -97,6 +97,7 @@ func SendMetric(url string, gen *metgen.MetGen, sendMethod string) {
 					errCollect = append(errCollect, err)
 					continue
 				} else {
+					defer resp.Body.Close()
 					break
 				}
 			}
@@ -104,7 +105,6 @@ func SendMetric(url string, gen *metgen.MetGen, sendMethod string) {
 				fmt.Printf("fail while sending metrics: %s", errors.Join(errCollect...).Error())
 				return
 			}
-			defer resp.Body.Close()
 
 			fmt.Printf("success send, status: %s\n", resp.Status)
 			return
