@@ -102,7 +102,10 @@ func SendMetric(url string, gen *metgen.MetGen, sendMethod string) {
 				}
 			}
 			if errCollect != nil {
+				defer resp.Body.Close()
 				fmt.Printf("fail while sending metrics: %s", errors.Join(errCollect...).Error())
+			}
+			if err != nil {
 				return
 			}
 
