@@ -27,7 +27,7 @@ func New(intervalBackup int, filepathBackup string, restoreFromBackup bool, db *
 
 	storage.backupFile, err = fileio.New(filepathBackup, BACKUPFILENAME)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("fail while create/open file: %w", err)
 	}
 
 	if db != nil {
@@ -35,12 +35,12 @@ func New(intervalBackup int, filepathBackup string, restoreFromBackup bool, db *
 
 		err = db.CreateMetricsTable()
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("fail while create metrics table: %w", err)
 		}
 	} else if restoreFromBackup {
 		storage.ItemsGauge, storage.ItemsCounter, err = storage.backupFile.Read()
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("fail while read from backup file: %w", err)
 		}
 	} else {
 		storage.ItemsGauge = make(map[string]float64)
@@ -74,12 +74,12 @@ func (ms *MemStorage) Push(metric *Metric) error {
 		case TYPEGAUGE:
 			err := ms.DB.PushReplace(metric.Type, metric.Name, metric.Value)
 			if err != nil {
-				return err
+				return fmt.Errorf("fail while push gauge to db: %w", err)
 			}
 		case TYPECOUNTER:
 			err := ms.DB.PushAdd(metric.Type, metric.Name, metric.Value)
 			if err != nil {
-				return err
+				return fmt.Errorf("fail while push counter to db: %w", err)
 			}
 		default:
 			return ErrMetricTypeUnknown
@@ -155,7 +155,7 @@ func (ms *MemStorage) List() ([]string, error) {
 	default:
 		mapGauge, mapCounter, err = ms.DB.List(TYPEGAUGE, TYPECOUNTER)
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("fail while get list of metrics from db: %w", err)
 		}
 	}
 	ms.mu.Lock()
