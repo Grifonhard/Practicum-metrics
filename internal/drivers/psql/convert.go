@@ -33,7 +33,7 @@ func (m *MetricString) Scan(value interface{}) error {
 
 	mr, err := driver.String.ConvertValue(value)
 	if err != nil {
-		return fmt.Errorf("cannot scan value: %v", err)
+		return fmt.Errorf("cannot scan value: %w", err)
 	}
 
 	mc, ok := mr.(string)
