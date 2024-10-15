@@ -3,6 +3,7 @@ package webserver
 import (
 	"bytes"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -179,7 +180,7 @@ func GetJSON(stor *storage.MemStorage) gin.HandlerFunc {
 		}
 
 		value, err := stor.Get(&item)
-		if err != nil && err == storage.ErrMetricNoData {
+		if err != nil && errors.Is(err, storage.ErrMetricNoData) {
 			logger.Error(fmt.Sprintf("fail while get error: %s", err.Error()))
 			c.Header("Content-Type", "application/json; charset=utf-8")
 			c.JSON(http.StatusNotFound, gin.H{"error": "fail get data from db: no data"})
@@ -221,7 +222,7 @@ func Get(stor *storage.MemStorage) gin.HandlerFunc {
 
 			//получаем данные
 			value, err := stor.Get(item)
-			if err != nil && err == storage.ErrMetricEmpty {
+			if err != nil && errors.Is(err, storage.ErrMetricEmpty) {
 				c.String(http.StatusInternalServerError, err.Error())
 				c.Abort()
 				return
