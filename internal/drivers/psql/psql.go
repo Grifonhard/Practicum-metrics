@@ -188,7 +188,9 @@ func (db *DB) GetOneValue(metric, metricName string) (float64, error) {
 			break
 		}
 	}
-	if err != nil {
+	if err != nil && errors.Is(err, sql.ErrNoRows){
+		return 0, ErrNoData
+	} else if err != nil {
 		return 0, err
 	}
 	if !value.Valid {
@@ -221,7 +223,9 @@ func (db *DB) GetArrayValues(metric, metricName string) (values []float64, err e
 			break
 		}
 	}
-	if err != nil {
+	if err != nil && errors.Is(err, sql.ErrNoRows){
+		return nil, ErrNoData
+	} else if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
@@ -238,7 +242,9 @@ func (db *DB) GetArrayValues(metric, metricName string) (values []float64, err e
 	}
 
 	err = rows.Err()
-	if err != nil {
+	if err != nil && errors.Is(err, sql.ErrNoRows){
+		return nil, ErrNoData
+	} else if err != nil {
 		return nil, err
 	}
 
@@ -265,7 +271,9 @@ func (db *DB) List(metricOneValue, metricArrayValues string) (map[string]float64
 			break
 		}
 	}
-	if err != nil {
+	if err != nil && errors.Is(err, sql.ErrNoRows){
+		return nil, nil, ErrNoData
+	} else if err != nil {
 		return nil, nil, err
 	}
 	defer rows.Close()
@@ -289,7 +297,9 @@ func (db *DB) List(metricOneValue, metricArrayValues string) (map[string]float64
 	}
 
 	err = rows.Err()
-	if err != nil {
+	if err != nil && errors.Is(err, sql.ErrNoRows){
+		return nil, nil, ErrNoData
+	} else if err != nil {
 		return nil, nil, err
 	}
 
