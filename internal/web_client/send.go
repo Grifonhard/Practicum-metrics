@@ -94,6 +94,7 @@ func SendMetric(url string, gen *metgen.MetGen, sendMethod string) {
 			for i := 0; i < MAXRETRIES; i++ {
 				resp, err = cl.Do(req)
 				if err != nil {
+					time.Sleep(time.Second + RETRYINTERVALINCREASE*time.Duration(i))
 					errCollect = append(errCollect, err)
 					continue
 				} else {
