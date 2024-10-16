@@ -223,12 +223,12 @@ func Get(stor *storage.MemStorage) gin.HandlerFunc {
 			//получаем данные
 			value, err := stor.Get(item)
 			if err != nil && (errors.Is(err, storage.ErrMetricNoData) || errors.Is(err, psql.ErrNoData)) {
-				c.String(http.StatusInternalServerError, err.Error())
+				c.String(http.StatusNotFound, err.Error())
 				c.Abort()
 				return
 			} else if err != nil {
 				logger.Error(fmt.Sprintf("fail while get error: %s", err.Error()))
-				c.String(http.StatusNotFound, "data not found")
+				c.String(http.StatusInternalServerError, "data not found")
 				c.Abort()
 				return
 			}
