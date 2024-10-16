@@ -11,6 +11,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/Grifonhard/Practicum-metrics/internal/logger"
 	metgen "github.com/Grifonhard/Practicum-metrics/internal/met_gen"
 	"github.com/Grifonhard/Practicum-metrics/internal/storage"
 )
@@ -41,7 +42,7 @@ func SendMetric(url string, gen *metgen.MetGen, sendMethod string) {
 	var buf bytes.Buffer
 	gauge, counter, err := gen.Collect()
 	if err != nil {
-		fmt.Printf("fail collect metrics: %s", err.Error())
+		logger.Error(fmt.Sprintf("fail collect metrics: %s", err.Error()))
 	}
 	enc := json.NewEncoder(&buf)
 	// используется только для массива итемов
@@ -55,7 +56,7 @@ func SendMetric(url string, gen *metgen.MetGen, sendMethod string) {
 			case SENDSUBSEQUENCE:
 				err = enc.Encode(item)
 				if err != nil {
-					fmt.Printf("fail encode metrics: %s", err.Error())
+					logger.Error(fmt.Sprintf("fail encode metrics: %s", err.Error()))
 				}
 			case SENDARRAY:
 				items = append(items, item)
@@ -65,20 +66,20 @@ func SendMetric(url string, gen *metgen.MetGen, sendMethod string) {
 			if sendMethod == SENDARRAY {
 				err = enc.Encode(items)
 				if err != nil {
-					fmt.Printf("fail encode metrics: %s", err.Error())
+					logger.Error(fmt.Sprintf("fail encode metrics: %s", err.Error()))
 				}
 			}
 			//сжимаем данные
 			compressed, err := compressBeforeSend(&buf)
 			if err != nil {
-				fmt.Printf("fail while compress: %s", err.Error())
+				logger.Error(fmt.Sprintf("fail while compress: %s", err.Error()))
 				cancel()
 				return
 			}
 			//подготовка реквеста и клиента
 			req, err := http.NewRequest(http.MethodPost, url, compressed)
 			if err != nil {
-				fmt.Printf("fail while create request: %s", err.Error())
+				logger.Error(fmt.Sprintf("fail while create request: %s", err.Error()))
 				cancel()
 				return
 			}
@@ -103,14 +104,14 @@ func SendMetric(url string, gen *metgen.MetGen, sendMethod string) {
 				}
 			}
 			if errCollect != nil {
-				fmt.Printf("problem with sending metrics: %s\n", errors.Join(errCollect...).Error())
+				logger.Error(fmt.Sprintf("problem with sending metrics: %s\n", errors.Join(errCollect...).Error()))
 			}
 			if err != nil {
-				fmt.Printf("fail while sending metrics: %s\n", err.Error())
+				logger.Error(fmt.Sprintf("fail while sending metrics: %s\n", err.Error()))
 				return
 			}
 
-			fmt.Printf("success send, status: %s\n", resp.Status)
+			logger.Info(fmt.Sprintf("success send, status: %s\n", resp.Status))
 			return
 		}
 	}
