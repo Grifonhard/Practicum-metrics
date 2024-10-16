@@ -10,7 +10,6 @@ import (
 	"time"
 
 	"github.com/Grifonhard/Practicum-metrics/internal/logger"
-	"github.com/bytedance/sonic/decoder"
 )
 
 type File struct {
