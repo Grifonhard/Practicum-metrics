@@ -180,7 +180,7 @@ func GetJSON(stor *storage.MemStorage) gin.HandlerFunc {
 		}
 
 		value, err := stor.Get(&item)
-		if err != nil && errors.Is(err, storage.ErrMetricNoData) {
+		if err != nil && (errors.Is(err, storage.ErrMetricNoData) || errors.Is(err, psql.ErrNoData)) {
 			logger.Error(fmt.Sprintf("fail while get error: %s", err.Error()))
 			c.Header("Content-Type", "application/json; charset=utf-8")
 			c.JSON(http.StatusNotFound, gin.H{"error": "fail get data from db: no data"})
@@ -222,7 +222,7 @@ func Get(stor *storage.MemStorage) gin.HandlerFunc {
 
 			//получаем данные
 			value, err := stor.Get(item)
-			if err != nil && errors.Is(err, storage.ErrMetricEmpty) {
+			if err != nil && (errors.Is(err, storage.ErrMetricNoData) || errors.Is(err, psql.ErrNoData)) {
 				c.String(http.StatusInternalServerError, err.Error())
 				c.Abort()
 				return

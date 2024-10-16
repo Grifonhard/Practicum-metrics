@@ -128,9 +128,7 @@ func (ms *MemStorage) Get(metric *Metric) (float64, error) {
 			return ms.DB.GetOneValue(metric.Type, metric.Name)
 		case TYPECOUNTER:
 			values, err := ms.DB.GetArrayValues(metric.Type, metric.Name)
-			if err != nil && err == psql.ErrNoData {
-				return 0, ErrMetricNoData
-			} else if err != nil {
+			if err != nil {
 				return 0, fmt.Errorf("error while get value from postgres: %v", err)
 			}
 			var result float64
