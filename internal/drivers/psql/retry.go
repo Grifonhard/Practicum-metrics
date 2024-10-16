@@ -33,7 +33,7 @@ func openRetry(driverName string, dataSourceName string) (db *sql.DB, err error)
 
 func (db *DB) execRetry(query string, args ...any) (result sql.Result, err error) {
 	for i := 0; i < MAXRETRIES; i++ {
-		result, err = db.Exec(query)
+		result, err = db.Exec(query, args...)
 		if err != nil {
 			if pgErr := new(pgconn.PgError); errors.As(err, &pgErr) && pgErr.Code == pgerrcode.ConnectionException {
 				time.Sleep(time.Second + RETRYINTERVALINCREASE*time.Duration(i))
