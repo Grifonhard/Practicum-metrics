@@ -4,6 +4,7 @@ import (
 	"encoding/gob"
 	"errors"
 	"fmt"
+	"io/fs"
 	"os"
 	"path/filepath"
 	"sync"
@@ -128,10 +129,11 @@ func (f *File) Read() (map[string]float64, map[string][]float64, error) {
 		return data.ItemsGauge, data.ItemsCounter, nil
 	}
 	var errCollect []error
+	var fileInfo fs.FileInfo
 	var err error
 
 	for i := 0; i < MAXRETRIES + 1; i++ {
-		fileInfo, err := f.file.Stat()
+		fileInfo, err = f.file.Stat()
 		if err != nil {
 			if i == MAXRETRIES {
 				err = fmt.Errorf("не удалось получить информацию о файле: %w", err)
