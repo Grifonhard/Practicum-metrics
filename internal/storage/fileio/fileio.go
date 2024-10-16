@@ -135,6 +135,7 @@ func (f *File) Read() (map[string]float64, map[string][]float64, error) {
 		if err != nil {
 			if i == MAXRETRIES {
 				err = fmt.Errorf("не удалось получить информацию о файле: %w", err)
+				errCollect = append(errCollect, err)
 				break
 			}
 			err = fmt.Errorf("не удалось получить информацию о файле: %w", err)
@@ -162,6 +163,7 @@ func (f *File) Read() (map[string]float64, map[string][]float64, error) {
 				return data.ItemsGauge, data.ItemsCounter, nil
 			}
 			err = fmt.Errorf("проблемы с чтением файла: %w", err)
+			errCollect = append(errCollect, err)
 			time.Sleep(time.Second + RETRYINTERVALINCREASE*time.Duration(i))
 			continue
 		} else {
