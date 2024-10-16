@@ -179,11 +179,8 @@ func (db *DB) GetOneValue(metric, metricName string) (float64, error) {
 	for i := 0; i < MAXRETRIES; i++ {
 		err = row.Scan(&value)
 		if err != nil {
-			if pgErr := new(pgconn.PgError); errors.As(err, &pgErr) && pgErr.Code == pgerrcode.ConnectionException {
-				time.Sleep(time.Second + RETRYINTERVALINCREASE*time.Duration(i))
-				continue
-			}
-			break
+			time.Sleep(time.Second + RETRYINTERVALINCREASE*time.Duration(i))
+			continue
 		} else {
 			break
 		}
@@ -212,11 +209,8 @@ func (db *DB) GetArrayValues(metric, metricName string) (values []float64, err e
 	for i := 0; i < MAXRETRIES; i++ {
 		rows, err = db.Query(query, ms.MetricType+METRICSEPARATOR+ms.MetricName)
 		if err != nil {
-			if pgErr := new(pgconn.PgError); errors.As(err, &pgErr) && pgErr.Code == pgerrcode.ConnectionException {
-				time.Sleep(time.Second + RETRYINTERVALINCREASE*time.Duration(i))
-				continue
-			}
-			break
+			time.Sleep(time.Second + RETRYINTERVALINCREASE*time.Duration(i))
+			continue
 		} else {
 			break
 		}
