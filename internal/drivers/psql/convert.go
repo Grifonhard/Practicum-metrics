@@ -2,7 +2,6 @@ package psql
 
 import (
 	"database/sql/driver"
-	"errors"
 	"fmt"
 	"strings"
 )
@@ -38,7 +37,7 @@ func (m *MetricString) Scan(value interface{}) error {
 
 	mc, ok := mr.(string)
 	if !ok {
-		return errors.New("cannot scan value. cannot convert value to string")
+		return ErrConvertProblem
 	}
 	mFields := strings.Split(mc, METRICSEPARATOR)
 
