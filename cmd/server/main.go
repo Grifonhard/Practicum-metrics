@@ -66,7 +66,7 @@ func main() {
 
 	var db *psql.DB
 	if *databaseDsn != "" {
-		fmt.Printf("Database DSN: %s\n", *databaseDsn)
+		logger.Info(fmt.Sprintf("Database DSN: %s\n", *databaseDsn))
 		db, err = psql.ConnectDB(*databaseDsn)
 		if err != nil {
 			log.Fatal(err)
@@ -82,7 +82,7 @@ func main() {
 
 	r := initRouter(stor, db)
 
-	fmt.Printf("Server start %s\n", *addr)
+	logger.Info(fmt.Sprintf("Server start %s\n", *addr))
 	log.Fatal(r.Run(*addr))
 }
 

@@ -56,7 +56,7 @@ func New(path, filename string) (*File, error) {
 			}
 		}
 		if errCollect != nil {
-			fmt.Printf("problem with open file: %s\n", errors.Join(errCollect...).Error())
+			logger.Error(fmt.Sprintf("problem with open file: %s\n", errors.Join(errCollect...).Error()))
 		}
 		if err != nil {
 			return nil, err
@@ -108,7 +108,7 @@ func (f *File) Write(data *Data) error {
 		}
 	}
 	if errCollect != nil {
-		fmt.Printf("problem with write file: %s\n", errors.Join(errCollect...).Error())
+		logger.Error(fmt.Sprintf("problem with write file: %s\n", errors.Join(errCollect...).Error()))
 	}
 	if err != nil {
 		return err
@@ -155,7 +155,7 @@ func (f *File) Read() (map[string]float64, map[string][]float64, error) {
 		err = decoder.Decode(&data)
 		if err != nil {
 			if i == MAXRETRIES {
-				fmt.Printf("problem with read file: %s\n", errors.Join(errCollect...).Error())
+				logger.Error(fmt.Sprintf("problem with read file: %s\n", errors.Join(errCollect...).Error()))
 				logger.Error(fmt.Sprintf("Файл %s поврежден, удаляю...\n", f.fullpath))
 				removeErr := os.Remove(f.fullpath)
 				if removeErr != nil {
@@ -173,7 +173,7 @@ func (f *File) Read() (map[string]float64, map[string][]float64, error) {
 		}
 	}
 	if errCollect != nil {
-		fmt.Printf("problem with read file: %s\n", errors.Join(errCollect...).Error())
+		logger.Error(fmt.Sprintf("problem with read file: %s\n", errors.Join(errCollect...).Error()))
 	}
 	if err != nil {
 		return nil, nil, err
