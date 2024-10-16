@@ -9,7 +9,10 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
+	"os"
+	"log"
 
+	"github.com/Grifonhard/Practicum-metrics/internal/logger"
 	metgen "github.com/Grifonhard/Practicum-metrics/internal/met_gen"
 	"github.com/Grifonhard/Practicum-metrics/internal/storage"
 	"github.com/stretchr/testify/assert"
@@ -111,6 +114,11 @@ func TestSendMetric(t *testing.T) {
 	// Создаем временный HTTP-сервер
 	var receivedRequest *http.Request
 	var receivedBody []byte
+
+	err := logger.Init(os.Stdout, 4)
+	if err != nil {
+		log.Fatal(err)
+	}
 
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		receivedRequest = r
