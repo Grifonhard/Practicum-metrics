@@ -156,8 +156,8 @@ func Updates(stor *storage.MemStorage) gin.HandlerFunc {
 
 func GetJSON(stor *storage.MemStorage) gin.HandlerFunc {
 	return func(c *gin.Context) {
+		c.Header("Content-Type", "application/json; charset=utf-8")
 		if !strings.Contains(c.Request.Header.Get("Content-Type"), "application/json") {
-			c.Header("Content-Type", "application/json; charset=utf-8")
 			c.JSON(http.StatusBadRequest, gin.H{"error": "wrong content type, only json allow"})
 			c.Abort()
 			return
@@ -168,7 +168,6 @@ func GetJSON(stor *storage.MemStorage) gin.HandlerFunc {
 
 		if err := c.ShouldBindJSON(&item); err != nil {
 			logger.Error(fmt.Sprintf("fail while decode error: %s", err.Error()))
-			c.Header("Content-Type", "application/json; charset=utf-8")
 			c.JSON(http.StatusBadRequest, gin.H{"error": "fail unmarshal data"})
 			c.Abort()
 			return
@@ -177,13 +176,11 @@ func GetJSON(stor *storage.MemStorage) gin.HandlerFunc {
 		value, err := stor.Get(&item)
 		if err != nil && (errors.Is(err, storage.ErrMetricNoData) || errors.Is(err, psql.ErrNoData)) {
 			logger.Error(fmt.Sprintf("fail while get error: %s", err.Error()))
-			c.Header("Content-Type", "application/json; charset=utf-8")
 			c.JSON(http.StatusNotFound, gin.H{"error": "fail get data from db: no data"})
 			c.Abort()
 			return
 		} else if err != nil {
 			logger.Error(fmt.Sprintf("fail while get error: %s", err.Error()))
-			c.Header("Content-Type", "application/json; charset=utf-8")
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "fail while get data from db"})
 			c.Abort()
 			return
@@ -192,7 +189,6 @@ func GetJSON(stor *storage.MemStorage) gin.HandlerFunc {
 		item.Value = value
 
 		// Логируем заголовки и тело ответа
-		c.Header("Content-Type", "application/json; charset=utf-8")
 		c.JSON(http.StatusOK, &item)
 	}
 }
