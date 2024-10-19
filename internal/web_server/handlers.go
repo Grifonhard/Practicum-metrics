@@ -114,8 +114,8 @@ func Update(stor *storage.MemStorage) gin.HandlerFunc {
 func Updates(stor *storage.MemStorage) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		var buf bytes.Buffer
-		_, err := buf.ReadFrom(c.Request.Body)
 		c.Header("Content-Type", "application/json; charset=utf-8")
+		_, err := buf.ReadFrom(c.Request.Body)		
 		if err != nil {
 			logger.Error(fmt.Sprintf("fail while read to buffer error: %s", err.Error()))
 			c.JSON(http.StatusBadRequest, gin.H{"error": "fail read data"})
