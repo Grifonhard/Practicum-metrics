@@ -106,7 +106,7 @@ func (db *DB) GetOneValue(metric, metricName string) (float64, error) {
 	var value sql.NullFloat64
 
 	err := db.rowScanRetry(row, &value)
-	if err != nil && errors.Is(err, sql.ErrNoRows){
+	if errors.Is(err, sql.ErrNoRows){
 		return 0, ErrNoData
 	} else if err != nil {
 		return 0, err
@@ -129,7 +129,7 @@ func (db *DB) GetArrayValues(metric, metricName string) (values []float64, err e
 
 	// pgx НЕ ПОДДЕРЖИВАЕТ Value()
 	rows, err := db.queryRetry(query, ms.MetricType+METRICSEPARATOR+ms.MetricName)	
-	if err != nil && errors.Is(err, sql.ErrNoRows){
+	if errors.Is(err, sql.ErrNoRows){
 		return nil, ErrNoData
 	} else if err != nil {
 		return nil, err
@@ -148,7 +148,7 @@ func (db *DB) GetArrayValues(metric, metricName string) (values []float64, err e
 	}
 
 	err = rows.Err()
-	if err != nil && errors.Is(err, sql.ErrNoRows){
+	if errors.Is(err, sql.ErrNoRows){
 		return nil, ErrNoData
 	} else if err != nil {
 		return nil, err
@@ -164,7 +164,7 @@ func (db *DB) List(metricOneValue, metricArrayValues string) (map[string]float64
 	query := `SELECT * FROM ` + TABLENAME + `;`
 
 	rows, err := db.queryRetry(query)
-	if err != nil && errors.Is(err, sql.ErrNoRows){
+	if errors.Is(err, sql.ErrNoRows){
 		return nil, nil, ErrNoData
 	} else if err != nil {
 		return nil, nil, err
@@ -190,7 +190,7 @@ func (db *DB) List(metricOneValue, metricArrayValues string) (map[string]float64
 	}
 
 	err = rows.Err()
-	if err != nil && errors.Is(err, sql.ErrNoRows){
+	if errors.Is(err, sql.ErrNoRows){
 		return nil, nil, ErrNoData
 	} else if err != nil {
 		return nil, nil, err
