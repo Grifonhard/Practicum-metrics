@@ -1,14 +1,9 @@
 package fileio
 
 import (
-	"encoding/gob"
-	"fmt"
-
 	"os"
 	"path/filepath"
 	"sync"
-
-	"github.com/Grifonhard/Practicum-metrics/internal/logger"
 )
 
 type File struct {
@@ -25,16 +20,14 @@ type Data struct {
 func New(path, filename string) (*File, error) {
 	var mu sync.Mutex
 	var file *os.File
-	var err error
 
 	fullpath := filepath.Join(path, filename)
-
 	if path != "" {
-		err = os.Mkdir(path, 0755)
+		err := os.Mkdir(path, 0755)
 		if err != nil && !os.IsExist(err){
 			return nil, err
 		}
-		file, err = os.OpenFile(fullpath, os.O_RDWR|os.O_CREATE, 0666)
+		file, err = openFileRetry(fullpath, os.O_RDWR, 0666)
 		if err != nil {
 			return nil, err
 		}
@@ -54,20 +47,9 @@ func (f *File) Write(data *Data) error {
 		return nil
 	}
 
-	err := f.file.Truncate(0)
+	err := f.writeToFileRetry(data)
 	if err != nil {
-		return fmt.Errorf("fail truncate file: %w", err)
-	}
-
-	_, err = f.file.Seek(0, 0)
-	if err != nil {
-		return fmt.Errorf("failed to move pointer to beginning of file: %w", err)
-	}
-
-	encoder := gob.NewEncoder(f.file)
-
-	if err := encoder.Encode(data); err != nil {
-		return fmt.Errorf("failed to write data to file: %w", err)
+		return err
 	}
 
 	return f.file.Sync()
@@ -84,27 +66,10 @@ func (f *File) Read() (map[string]float64, map[string][]float64, error) {
 	if f.file == nil {
 		return data.ItemsGauge, data.ItemsCounter, nil
 	}
-
-	fileInfo, err := f.file.Stat()
+	
+	err := f.readFromFileRetry(&data)
 	if err != nil {
-		return nil, nil, fmt.Errorf("не удалось получить информацию о файле: %w", err)
-	}
-
-	if fileInfo.Size() == 0 {
-		return data.ItemsGauge, data.ItemsCounter, nil
-	}
-
-	decoder := gob.NewDecoder(f.file)
-
-	err = decoder.Decode(&data)
-	if err != nil {
-		logger.Error(fmt.Sprintf("Файл %s поврежден, удаляю...\n", f.fullpath))
-		removeErr := os.Remove(f.fullpath)
-		if removeErr != nil {
-			return nil, nil, fmt.Errorf("не удалось удалить поврежденный файл: %w", removeErr)
-		}
-		logger.Error(err)
-		return data.ItemsGauge, data.ItemsCounter, nil
+		return nil, nil, err
 	}
 
 	return data.ItemsGauge, data.ItemsCounter, nil

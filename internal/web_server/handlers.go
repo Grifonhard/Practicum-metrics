@@ -3,11 +3,13 @@ package webserver
 import (
 	"bytes"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
 	"strings"
 
+	"github.com/Grifonhard/Practicum-metrics/internal/drivers/psql"
 	"github.com/Grifonhard/Practicum-metrics/internal/logger"
 	"github.com/Grifonhard/Practicum-metrics/internal/storage"
 	"github.com/gin-gonic/gin"
@@ -109,6 +111,49 @@ func Update(stor *storage.MemStorage) gin.HandlerFunc {
 	}
 }
 
+func Updates(stor *storage.MemStorage) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		var buf bytes.Buffer
+		c.Header("Content-Type", "application/json; charset=utf-8")
+		_, err := buf.ReadFrom(c.Request.Body)		
+		if err != nil {
+			logger.Error(fmt.Sprintf("fail while read to buffer error: %s", err.Error()))
+			c.JSON(http.StatusBadRequest, gin.H{"error": "fail read data"})
+			c.Abort()
+			return
+		}
+		var items []storage.Metric
+		err = json.Unmarshal(buf.Bytes(), &items)
+		if err != nil {
+			logger.Error(fmt.Sprintf("fail while decode error: %s", err.Error()))
+			c.JSON(http.StatusBadRequest, gin.H{"error": "fail unmarshal data"})
+			c.Abort()
+			return
+		}
+
+		for i, item := range items {
+			err = stor.Push(&item)
+			if err != nil {
+				logger.Error(fmt.Sprintf("fail while push error: %s", err.Error()))
+				c.JSON(http.StatusInternalServerError, gin.H{"error": "fail push data to db"})
+				c.Abort()
+				return
+			}
+
+			renewValue, err := stor.Get(&item)
+			if err != nil {
+				logger.Error(fmt.Sprintf("fail while get error: %s", err.Error()))
+				c.JSON(http.StatusInternalServerError, gin.H{"error": "fail while control renew data"})
+				c.Abort()
+				return
+			}
+
+			items[i].Value = renewValue
+		}
+		c.JSON(http.StatusOK, items)
+	}
+}
+
 func GetJSON(stor *storage.MemStorage) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		if !strings.Contains(c.Request.Header.Get("Content-Type"), "application/json") {
@@ -130,7 +175,7 @@ func GetJSON(stor *storage.MemStorage) gin.HandlerFunc {
 		}
 
 		value, err := stor.Get(&item)
-		if err != nil && err == storage.ErrMetricNoData {
+		if err != nil && (errors.Is(err, storage.ErrMetricNoData) || errors.Is(err, psql.ErrNoData)) {
 			logger.Error(fmt.Sprintf("fail while get error: %s", err.Error()))
 			c.Header("Content-Type", "application/json; charset=utf-8")
 			c.JSON(http.StatusNotFound, gin.H{"error": "fail get data from db: no data"})
@@ -172,13 +217,13 @@ func Get(stor *storage.MemStorage) gin.HandlerFunc {
 
 			//получаем данные
 			value, err := stor.Get(item)
-			if err != nil && err == storage.ErrMetricEmpty {
-				c.String(http.StatusInternalServerError, err.Error())
+			if err != nil && (errors.Is(err, storage.ErrMetricNoData) || errors.Is(err, psql.ErrNoData)) {
+				c.String(http.StatusNotFound, err.Error())
 				c.Abort()
 				return
 			} else if err != nil {
 				logger.Error(fmt.Sprintf("fail while get error: %s", err.Error()))
-				c.String(http.StatusNotFound, "data not found")
+				c.String(http.StatusInternalServerError, "data not found")
 				c.Abort()
 				return
 			}
@@ -210,5 +255,18 @@ func List(stor *storage.MemStorage) gin.HandlerFunc {
 			"Title": "List of metrics",
 			"Items": list,
 		})
+	}
+}
+
+func PingDB(db *psql.DB) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		err := db.Ping()
+		if err != nil {
+			logger.Error(fmt.Sprintf("fail ping db error: %s", err.Error()))
+			c.String(http.StatusInternalServerError, "not pong")
+			c.Abort()
+			return
+		}
+		c.String(http.StatusOK, "pong")
 	}
 }

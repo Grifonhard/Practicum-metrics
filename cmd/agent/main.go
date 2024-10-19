@@ -4,8 +4,10 @@ import (
 	"flag"
 	"fmt"
 	"log"
+	"os"
 	"time"
 
+	"github.com/Grifonhard/Practicum-metrics/internal/logger"
 	metgen "github.com/Grifonhard/Practicum-metrics/internal/met_gen"
 	webclient "github.com/Grifonhard/Practicum-metrics/internal/web_client"
 	"github.com/caarlos0/env/v10"
@@ -51,15 +53,20 @@ func main() {
 	timerPoll := time.NewTicker(time.Duration(*pollInterval) * time.Second)
 	timerReport := time.NewTicker(time.Duration(*reportInterval) * time.Second)
 
+	err = logger.Init(os.Stdout, 4)
+	if err != nil {
+		log.Fatal(err)
+	}
+
 	for {
 		select {
 		case <-timerPoll.C:
 			err = generator.Renew()
 			if err != nil {
-				fmt.Printf("Fail renew metrics: %s\n", err.Error())
+				logger.Error(fmt.Sprintf("Fail renew metrics: %s\n", err.Error()))
 			}
 		case <-timerReport.C:
-			go webclient.SendMetric(fmt.Sprintf("http://%s/update", *address), generator)
+			go webclient.SendMetric(fmt.Sprintf("http://%s/updates", *address), generator, webclient.SENDARRAY)
 		}
 	}
 }

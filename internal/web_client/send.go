@@ -5,11 +5,13 @@ import (
 	"compress/gzip"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
 	"sync"
 	"time"
 
+	"github.com/Grifonhard/Practicum-metrics/internal/logger"
 	metgen "github.com/Grifonhard/Practicum-metrics/internal/met_gen"
 	"github.com/Grifonhard/Practicum-metrics/internal/storage"
 )
@@ -21,57 +23,95 @@ type Metrics struct {
 	Value *float64 `json:"value,omitempty"` // значение метрики в случае передачи gauge
 }
 
-func SendMetric(url string, gen *metgen.MetGen) {
+const (
+	SENDSUBSEQUENCE = "subsequence mode" // для /update
+	SENDARRAY       = "array mode"       // для /updates
+)
+
+// если неудачно
+const (
+	MAXRETRIES            = 3               // Максимальное количество попыток
+	RETRYINTERVALINCREASE = 2 * time.Second // на столько растёт интервал между попытками, начиная с 1 секунды
+)
+
+func SendMetric(url string, gen *metgen.MetGen, sendMethod string) {
 	ctx, cancel := context.WithCancel(context.Background())
 	ch := make(chan *Metrics)
 
-	//подготовка данных
+	// подготовка данных
 	var buf bytes.Buffer
 	gauge, counter, err := gen.Collect()
 	if err != nil {
-		fmt.Printf("fail collect metrics: %s", err.Error())
+		logger.Error(fmt.Sprintf("fail collect metrics: %s", err.Error()))
 	}
-	enc := json.NewEncoder(&buf)	
+	enc := json.NewEncoder(&buf)
+	// используется только для массива итемов
+	var items []*Metrics
 
 	go prepareDataToSend(gauge, counter, ch, cancel)
 	for {
 		select {
 		case item := <-ch:
-			err = enc.Encode(item)
-			if err != nil {
-				fmt.Printf("fail encode metrics: %s", err.Error())
+			switch sendMethod {
+			case SENDSUBSEQUENCE:
+				err = enc.Encode(item)
+				if err != nil {
+					logger.Error(fmt.Sprintf("fail encode metrics: %s", err.Error()))
+				}
+			case SENDARRAY:
+				items = append(items, item)
 			}
 		case <-ctx.Done():
 			close(ch)
+			if sendMethod == SENDARRAY {
+				err = enc.Encode(items)
+				if err != nil {
+					logger.Error(fmt.Sprintf("fail encode metrics: %s", err.Error()))
+				}
+			}
 			//сжимаем данные
 			compressed, err := compressBeforeSend(&buf)
 			if err != nil {
-				fmt.Printf("fail while compress: %s", err.Error())
+				logger.Error(fmt.Sprintf("fail while compress: %s", err.Error()))
 				cancel()
 				return
 			}
 			//подготовка реквеста и клиента
 			req, err := http.NewRequest(http.MethodPost, url, compressed)
 			if err != nil {
-				fmt.Printf("fail while create request: %s", err.Error())
+				logger.Error(fmt.Sprintf("fail while create request: %s", err.Error()))
 				cancel()
 				return
 			}
 			req.Header.Set("Content-Type", "application/json")
-			req.Header.Set("Content-Encoding","gzip")
+			req.Header.Set("Content-Encoding", "gzip")
 			//какого-то хрена заголовок Accept-Encoding gzip устанавливается автоматически в клиенте по умолчанию
 			cl := &http.Client{
 				Timeout: time.Minute,
 			}
 
-			resp, err := cl.Do(req)
+			var resp *http.Response
+			var errCollect []error
+			for i := 0; i < MAXRETRIES; i++ {
+				resp, err = cl.Do(req)
+				if err != nil {
+					time.Sleep(time.Second + RETRYINTERVALINCREASE*time.Duration(i))
+					errCollect = append(errCollect, err)
+					continue
+				} else {
+					defer resp.Body.Close()
+					break
+				}
+			}
+			if errCollect != nil {
+				logger.Error(fmt.Sprintf("problem with sending metrics: %s\n", errors.Join(errCollect...).Error()))
+			}
 			if err != nil {
-				fmt.Printf("fail while sending metrics: %s", err.Error())
+				logger.Error(fmt.Sprintf("fail while sending metrics: %s\n", err.Error()))
 				return
 			}
-			defer resp.Body.Close()
 
-			fmt.Printf("success send, status: %s\n", resp.Status)
+			logger.Info(fmt.Sprintf("success send, status: %s\n", resp.Status))
 			return
 		}
 	}
@@ -103,14 +143,14 @@ func prepareDataToSend(g map[string]float64, c map[string]int64, ch chan *Metric
 			ch <- &metric
 		}
 	}()
-	wg.Wait()	
+	wg.Wait()
 	cancel()
 }
 
 func compressBeforeSend(b *bytes.Buffer) (compressed *bytes.Buffer, err error) {
 	compressed = new(bytes.Buffer)
 	writer := gzip.NewWriter(compressed)
-	
+
 	_, err = writer.Write(b.Bytes())
 	if err != nil {
 		return nil, err
