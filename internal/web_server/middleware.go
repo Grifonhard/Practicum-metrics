@@ -146,7 +146,7 @@ func DataExtraction() gin.HandlerFunc {
 			}
 		}
 
-		if strings.Contains(c.Request.URL.Path, "/updates") {
+		if strings.Contains(c.Request.URL.Path, "/updates/") {
 			c.Next()
 		}
 

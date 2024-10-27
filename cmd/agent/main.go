@@ -71,7 +71,7 @@ func main() {
 				logger.Error(fmt.Sprintf("Fail renew metrics: %s\n", err.Error()))
 			}
 		case <-timerReport.C:
-			go webclient.SendMetric(fmt.Sprintf("http://%s/updates", *address), generator, *key, webclient.SENDARRAY)
+			go webclient.SendMetric(fmt.Sprintf("http://%s/updates/", *address), generator, *key, webclient.SENDARRAY)
 		}
 	}
 }
