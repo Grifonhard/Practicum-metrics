@@ -97,8 +97,8 @@ func initRouter(stor *storage.MemStorage, db *psql.DB, key string) *gin.Engine {
 	router := gin.Default()
 	router.LoadHTMLGlob("templates/*")
 
-	router.POST("/update", web.PseudoAuth(key), web.ReqRespLogger(key), web.DataExtraction(), web.RespEncode(), web.Update(stor))
-	router.POST("/update/:type/:name/:value", web.PseudoAuth(key), web.ReqRespLogger(key), web.DataExtraction(), web.Update(stor))
+	router.POST("/update", web.ReqRespLogger(""), web.DataExtraction(), web.RespEncode(), web.Update(stor))
+	router.POST("/update/:type/:name/:value", web.ReqRespLogger(""), web.DataExtraction(), web.Update(stor))
 	router.POST("/updates/", web.PseudoAuth(key), web.ReqRespLogger(key), web.DataExtraction(), web.Updates(stor))
 	router.GET("/value/:type/:name", web.ReqRespLogger(""), web.DataExtraction(), web.Get(stor))
 	router.POST("/value/", web.ReqRespLogger(""), web.RespEncode(), web.GetJSON(stor))
