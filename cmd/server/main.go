@@ -26,6 +26,7 @@ type CFG struct {
 	FileStoragePath *string `env:"FILE_STORAGE_PATH"`
 	Restore         *bool   `env:"RESTORE"`
 	DatabaseDsn     *string `env:"DATABASE_DSN"`
+	Key			    *string `env:"KEY"`
 }
 
 func main() {
@@ -34,6 +35,7 @@ func main() {
 	fileStoragePath := flag.String("f", "", "file storage path")
 	restore := flag.Bool("r", DEFAULTRESTORE, "restore from backup")
 	databaseDsn := flag.String("d", "", "database connect")
+	key := flag.String("k", "", "ключ для хэша")
 
 	flag.Parse()
 
@@ -57,6 +59,9 @@ func main() {
 	}
 	if cfg.DatabaseDsn != nil {
 		databaseDsn = cfg.DatabaseDsn
+	}
+	if cfg.Key != nil {
+		key = cfg.Key
 	}
 
 	err = logger.Init(os.Stdout, 4)

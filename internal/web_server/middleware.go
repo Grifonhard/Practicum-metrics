@@ -174,3 +174,8 @@ func RespEncode() gin.HandlerFunc {
 		c.Next()
 	}
 }
+
+func PseudoAuth(key string) gin.HandlerFunc {
+	return func(c *gin.Context) {		
+	}
+}
