@@ -150,7 +150,7 @@ func DataExtraction() gin.HandlerFunc {
 			c.Next()
 		}
 
-		if c.Request.Method == http.MethodPost && strings.Contains(c.Request.URL.Path, "/update") && strings.Contains(c.Request.Header.Get("Content-Type"), "application/json") {
+		if c.Request.Method == http.MethodPost && strings.Contains(c.Request.URL.Path, "/update/") && strings.Contains(c.Request.Header.Get("Content-Type"), "application/json") {
 			c.Set(METRICTYPE, METRICTYPEJSON)
 
 			c.Next()
