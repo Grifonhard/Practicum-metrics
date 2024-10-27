@@ -100,9 +100,9 @@ func initRouter(stor *storage.MemStorage, db *psql.DB, key string) *gin.Engine {
 	router.POST("/update", web.PseudoAuth(key), web.ReqRespLogger(key), web.DataExtraction(), web.RespEncode(), web.Update(stor))
 	router.POST("/update/:type/:name/:value", web.PseudoAuth(key), web.ReqRespLogger(key), web.DataExtraction(), web.Update(stor))
 	router.POST("/updates/", web.PseudoAuth(key), web.ReqRespLogger(key), web.DataExtraction(), web.Updates(stor))
-	router.GET("/value/:type/:name", web.PseudoAuth(key), web.ReqRespLogger(key), web.DataExtraction(), web.Get(stor))
-	router.POST("/value/", web.PseudoAuth(key), web.ReqRespLogger(key), web.RespEncode(), web.GetJSON(stor))
-	router.GET("/", web.PseudoAuth(key), web.ReqRespLogger(key), web.RespEncode(), web.List(stor))
+	router.GET("/value/:type/:name", web.ReqRespLogger(""), web.DataExtraction(), web.Get(stor))
+	router.POST("/value/", web.ReqRespLogger(""), web.RespEncode(), web.GetJSON(stor))
+	router.GET("/", web.ReqRespLogger(""), web.RespEncode(), web.List(stor))
 	if db != nil {
 		router.GET("/ping", web.PingDB(db))
 	}
