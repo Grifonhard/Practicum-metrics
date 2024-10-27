@@ -60,6 +60,7 @@ func Update(stor *storage.MemStorage) gin.HandlerFunc {
 			var err error
 			dec := json.NewDecoder(c.Request.Body)
 			enc := json.NewEncoder(&buf)
+			c.Header("Content-Type", "application/json; charset=utf-8")
 			for {
 				var item storage.Metric
 				err = dec.Decode(&item)
@@ -68,7 +69,6 @@ func Update(stor *storage.MemStorage) gin.HandlerFunc {
 				}
 				if err != nil {
 					logger.Error(fmt.Sprintf("fail while decode error: %s", err.Error()))
-					c.Header("Content-Type", "application/json; charset=utf-8")
 					c.JSON(http.StatusBadRequest, gin.H{"error": "fail unmarshal data"})
 					c.Abort()
 					return
@@ -77,7 +77,6 @@ func Update(stor *storage.MemStorage) gin.HandlerFunc {
 				err = stor.Push(&item)
 				if err != nil {
 					logger.Error(fmt.Sprintf("fail while push error: %s", err.Error()))
-					c.Header("Content-Type", "application/json; charset=utf-8")
 					c.JSON(http.StatusInternalServerError, gin.H{"error": "fail push data to db"})
 					c.Abort()
 					return
@@ -86,7 +85,6 @@ func Update(stor *storage.MemStorage) gin.HandlerFunc {
 				renewValue, err := stor.Get(&item)
 				if err != nil {
 					logger.Error(fmt.Sprintf("fail while get error: %s", err.Error()))
-					c.Header("Content-Type", "application/json; charset=utf-8")
 					c.JSON(http.StatusInternalServerError, gin.H{"error": "fail while control renew data"})
 					c.Abort()
 					return
@@ -96,13 +94,13 @@ func Update(stor *storage.MemStorage) gin.HandlerFunc {
 				err = enc.Encode(&item)
 				if err != nil {
 					logger.Error(fmt.Sprintf("fail while get error: %s", err.Error()))
-					c.Header("Content-Type", "application/json; charset=utf-8")
 					c.JSON(http.StatusInternalServerError, gin.H{"error": "fail while marshal data"})
 					c.Abort()
 					return
 				}
 			}
-			c.Data(http.StatusOK, "application/json; charset=utf-8", buf.Bytes())
+			c.Writer.WriteHeader(http.StatusOK)
+			c.Writer.Write(buf.Bytes())
 		default:
 			c.String(http.StatusInternalServerError, "wrong metric type in context")
 			c.Abort()

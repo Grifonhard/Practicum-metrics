@@ -23,12 +23,14 @@ type CFG struct {
 	Addr           *string `env:"ADDRESS"`
 	ReportInterval *int    `env:"REPORT_INTERVAL"`
 	PollInterval   *int    `env:"POLL_INTERVAL"`
+	Key			   *string `env:"KEY"`
 }
 
 func main() {
 	address := flag.String("a", DEFAULTADDR, "адрес сервера")
 	reportInterval := flag.Int("r", DEFAULTREPORTINTERVAL, "секунд частота отправки метрик")
 	pollInterval := flag.Int("p", DEFAULTPOLLINTERVAL, "секунд частота опроса метрик")
+	key := flag.String("k", "", "ключ для хэша")
 
 	flag.Parse()
 
@@ -46,6 +48,9 @@ func main() {
 	}
 	if cfg.ReportInterval != nil {
 		reportInterval = cfg.ReportInterval
+	}
+	if cfg.Key != nil {
+		key = cfg.Key
 	}
 
 	generator := metgen.New()
@@ -66,7 +71,7 @@ func main() {
 				logger.Error(fmt.Sprintf("Fail renew metrics: %s\n", err.Error()))
 			}
 		case <-timerReport.C:
-			go webclient.SendMetric(fmt.Sprintf("http://%s/updates", *address), generator, webclient.SENDARRAY)
+			go webclient.SendMetric(fmt.Sprintf("http://%s/updates/", *address), generator, *key, webclient.SENDARRAY)
 		}
 	}
 }

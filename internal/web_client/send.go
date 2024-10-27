@@ -4,6 +4,9 @@ import (
 	"bytes"
 	"compress/gzip"
 	"context"
+	"crypto/hmac"
+	"crypto/sha256"
+	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -34,7 +37,7 @@ const (
 	RETRYINTERVALINCREASE = 2 * time.Second // на столько растёт интервал между попытками, начиная с 1 секунды
 )
 
-func SendMetric(url string, gen *metgen.MetGen, sendMethod string) {
+func SendMetric(url string, gen *metgen.MetGen, keyHash, sendMethod string) {
 	ctx, cancel := context.WithCancel(context.Background())
 	ch := make(chan *Metrics)
 
@@ -82,6 +85,10 @@ func SendMetric(url string, gen *metgen.MetGen, sendMethod string) {
 				logger.Error(fmt.Sprintf("fail while create request: %s", err.Error()))
 				cancel()
 				return
+			}
+			if keyHash != "" {
+				hmacHash := computeHMAC(compressed.String(), keyHash)
+				req.Header.Set("HashSHA256", hmacHash)
 			}
 			req.Header.Set("Content-Type", "application/json")
 			req.Header.Set("Content-Encoding", "gzip")
@@ -162,4 +169,10 @@ func compressBeforeSend(b *bytes.Buffer) (compressed *bytes.Buffer, err error) {
 	}
 
 	return compressed, nil
+}
+
+func computeHMAC(value, key string) string {
+	h := hmac.New(sha256.New, []byte(key))
+	h.Write([]byte(value))
+	return hex.EncodeToString(h.Sum(nil))
 }

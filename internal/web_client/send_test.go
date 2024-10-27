@@ -150,7 +150,7 @@ func TestSendMetric(t *testing.T) {
 	}
 
 	// Вызов функции SendMetric с тестовым сервером и реальными метриками
-	SendMetric(ts.URL, realMetGen, SENDSUBSEQUENCE)
+	SendMetric(ts.URL, realMetGen, "", SENDSUBSEQUENCE)
 
 	// Проверяем, что запрос был получен
 	require.NotNil(t, receivedRequest, "Сервер не получил запрос")
