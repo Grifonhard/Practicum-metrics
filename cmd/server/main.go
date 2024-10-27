@@ -64,6 +64,8 @@ func main() {
 		key = cfg.Key
 	}
 
+	fmt.Println(key)
+
 	err = logger.Init(os.Stdout, 4)
 	if err != nil {
 		log.Fatal(err)
