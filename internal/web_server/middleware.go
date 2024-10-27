@@ -2,11 +2,15 @@ package webserver
 
 import (
 	"compress/gzip"
+	"crypto/hmac"
+	"crypto/sha256"
+	"encoding/hex"
 	"fmt"
 	"io"
 	"net/http"
 	"strings"
 	"time"
+	"bytes"
 
 	"github.com/Grifonhard/Practicum-metrics/internal/logger"
 	"github.com/gin-gonic/gin"
@@ -16,25 +20,31 @@ import (
 type respInfo struct {
 	status int
 	size   int
+	hash   string // на случай если потребуется работа с псевдоаутентификацией
 }
 
 type loggingResponseWriter struct {
 	gin.ResponseWriter
 	respInfo *respInfo
+	key string			// на случай если потребуется работа с псевдоаутентификацией
 }
 
 func (lw *loggingResponseWriter) Write(data []byte) (int, error) {
+	if lw.key != "" {
+		lw.respInfo.hash = computeHMAC(data, lw.key)
+	}
 	size, err := lw.ResponseWriter.Write(data)
 	lw.respInfo.size = size
 	return size, err
 }
 
 func (lw *loggingResponseWriter) WriteHeader(statusCode int) {
+	lw.ResponseWriter.Header().Set("HashSHA256", lw.respInfo.hash)
 	lw.respInfo.status = statusCode
 	lw.ResponseWriter.WriteHeader(statusCode)
 }
 
-func ReqRespLogger() gin.HandlerFunc {
+func ReqRespLogger(key string) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		start := time.Now()
 
@@ -43,6 +53,7 @@ func ReqRespLogger() gin.HandlerFunc {
 		lw := &loggingResponseWriter{
 			ResponseWriter: c.Writer,
 			respInfo:       respInfo,
+			key:			key,
 		}
 
 		c.Writer = lw
@@ -176,6 +187,38 @@ func RespEncode() gin.HandlerFunc {
 }
 
 func PseudoAuth(key string) gin.HandlerFunc {
-	return func(c *gin.Context) {		
+	return func(c *gin.Context) {
+		if key != "" {
+			body, err := io.ReadAll(c.Request.Body)
+			if err != nil {
+				c.JSON(http.StatusBadRequest, gin.H{"error": "Failed to read request body"})
+				c.Abort()
+				return
+			}
+
+			c.Request.Body = io.NopCloser(bytes.NewBuffer(body))
+
+			receivedHash := c.GetHeader("HashSHA256")
+            if receivedHash == "" {
+                c.JSON(http.StatusBadRequest, gin.H{"error": "Missing HashSHA256 header"})
+                c.Abort()
+                return
+            }
+
+			expectedHash := computeHMAC(body, key)
+            if receivedHash != expectedHash {
+                c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid HMAC"})
+                c.Abort()
+                return
+            }
+		}
+		
+		c.Next()
 	}
+}
+
+func computeHMAC(value []byte, key string) string {
+	h := hmac.New(sha256.New, []byte(key))
+	h.Write(value)
+	return hex.EncodeToString(h.Sum(nil))
 }

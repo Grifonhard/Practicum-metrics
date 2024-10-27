@@ -87,22 +87,22 @@ func main() {
 
 	go stor.BackupLoop()
 
-	r := initRouter(stor, db)
+	r := initRouter(stor, db, *key)
 
 	logger.Info(fmt.Sprintf("Server start %s\n", *addr))
 	log.Fatal(r.Run(*addr))
 }
 
-func initRouter(stor *storage.MemStorage, db *psql.DB) *gin.Engine {
+func initRouter(stor *storage.MemStorage, db *psql.DB, key string) *gin.Engine {
 	router := gin.Default()
 	router.LoadHTMLGlob("templates/*")
 
-	router.POST("/update", web.ReqRespLogger(), web.DataExtraction(), web.RespEncode(), web.Update(stor))
-	router.POST("/update/:type/:name/:value", web.ReqRespLogger(), web.DataExtraction(), web.Update(stor))
-	router.POST("/updates/", web.ReqRespLogger(), web.DataExtraction(), web.Updates(stor))
-	router.GET("/value/:type/:name", web.ReqRespLogger(), web.DataExtraction(), web.Get(stor))
-	router.POST("/value/", web.ReqRespLogger(), web.RespEncode(), web.GetJSON(stor))
-	router.GET("/", web.ReqRespLogger(), web.RespEncode(), web.List(stor))
+	router.POST("/update", web.PseudoAuth(key), web.ReqRespLogger(key), web.DataExtraction(), web.RespEncode(), web.Update(stor))
+	router.POST("/update/:type/:name/:value", web.PseudoAuth(key), web.ReqRespLogger(key), web.DataExtraction(), web.Update(stor))
+	router.POST("/updates/", web.PseudoAuth(key), web.ReqRespLogger(key), web.DataExtraction(), web.Updates(stor))
+	router.GET("/value/:type/:name", web.PseudoAuth(key), web.ReqRespLogger(key), web.DataExtraction(), web.Get(stor))
+	router.POST("/value/", web.PseudoAuth(key), web.ReqRespLogger(key), web.RespEncode(), web.GetJSON(stor))
+	router.GET("/", web.PseudoAuth(key), web.ReqRespLogger(key), web.RespEncode(), web.List(stor))
 	if db != nil {
 		router.GET("/ping", web.PingDB(db))
 	}
