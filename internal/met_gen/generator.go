@@ -17,6 +17,11 @@ type MetGen struct {
 	mu sync.Mutex
 }
 
+type oneGaugeMetric struct {
+	name string
+	metric float64
+}
+
 func New() *MetGen {
 	var mg MetGen
 	mg.MetricsGauge = make(map[string]float64)
@@ -27,39 +32,11 @@ func New() *MetGen {
 func (mg *MetGen) Renew() error {
 	mg.mu.Lock()
 	defer mg.mu.Unlock()
-	var memStats runtime.MemStats
-	runtime.ReadMemStats(&memStats)
+	var wg sync.WaitGroup
 
-	mg.MetricsGauge["Alloc"] = float64(memStats.Alloc)
-	mg.MetricsGauge["BuckHashSys"] = float64(memStats.BuckHashSys)
-	mg.MetricsGauge["Frees"] = float64(memStats.Frees)
-	mg.MetricsGauge["GCCPUFraction"] = memStats.GCCPUFraction
-	mg.MetricsGauge["GCSys"] = float64(memStats.GCSys)
-	mg.MetricsGauge["HeapAlloc"] = float64(memStats.HeapAlloc)
-	mg.MetricsGauge["HeapIdle"] = float64(memStats.HeapIdle)
-	mg.MetricsGauge["HeapInuse"] = float64(memStats.HeapInuse)
-	mg.MetricsGauge["HeapObjects"] = float64(memStats.HeapObjects)
-	mg.MetricsGauge["HeapReleased"] = float64(memStats.HeapReleased)
-	mg.MetricsGauge["HeapSys"] = float64(memStats.HeapSys)
-	mg.MetricsGauge["LastGC"] = float64(memStats.LastGC)
-	mg.MetricsGauge["Lookups"] = float64(memStats.Lookups)
-	mg.MetricsGauge["MCacheInuse"] = float64(memStats.MCacheInuse)
-	mg.MetricsGauge["MCacheSys"] = float64(memStats.MCacheSys)
-	mg.MetricsGauge["MSpanInuse"] = float64(memStats.MSpanInuse)
-	mg.MetricsGauge["MSpanSys"] = float64(memStats.MSpanSys)
-	mg.MetricsGauge["Mallocs"] = float64(memStats.Mallocs)
-	mg.MetricsGauge["NextGC"] = float64(memStats.NextGC)
-	mg.MetricsGauge["NumForcedGC"] = float64(memStats.NumForcedGC)
-	mg.MetricsGauge["NumGC"] = float64(memStats.NumGC)
-	mg.MetricsGauge["OtherSys"] = float64(memStats.OtherSys)
-	mg.MetricsGauge["PauseTotalNs"] = float64(memStats.PauseTotalNs)
-	mg.MetricsGauge["StackInuse"] = float64(memStats.StackInuse)
-	mg.MetricsGauge["StackSys"] = float64(memStats.StackSys)
-	mg.MetricsGauge["Sys"] = float64(memStats.Sys)
-	mg.MetricsGauge["TotalAlloc"] = float64(memStats.TotalAlloc)
-	mg.MetricsGauge["RandomValue"] = rand.Float64()
 
 	mg.MetricsCounter["PollCount"]++
+	wg.Wait()
 
 	return nil
 }
@@ -77,3 +54,48 @@ func (mg *MetGen) Collect() (map[string]float64, map[string]int64, error) {
 	}
 	return gg, cntr, nil
 }
+
+func getStandartMetrics(wg *sync.WaitGroup, output chan <- oneGaugeMetric) {
+	defer wg.Done()
+	var memStats runtime.MemStats
+	runtime.ReadMemStats(&memStats)
+	gauge := make(map[string]float64)
+
+	gauge["Alloc"] = float64(memStats.Alloc)
+	gauge["BuckHashSys"] = float64(memStats.BuckHashSys)
+	gauge["Frees"] = float64(memStats.Frees)
+	gauge["GCCPUFraction"] = memStats.GCCPUFraction
+	gauge["GCSys"] = float64(memStats.GCSys)
+	gauge["HeapAlloc"] = float64(memStats.HeapAlloc)
+	gauge["HeapIdle"] = float64(memStats.HeapIdle)
+	gauge["HeapInuse"] = float64(memStats.HeapInuse)
+	gauge["HeapObjects"] = float64(memStats.HeapObjects)
+	gauge["HeapReleased"] = float64(memStats.HeapReleased)
+	gauge["HeapSys"] = float64(memStats.HeapSys)
+	gauge["LastGC"] = float64(memStats.LastGC)
+	gauge["Lookups"] = float64(memStats.Lookups)
+	gauge["MCacheInuse"] = float64(memStats.MCacheInuse)
+	gauge["MCacheSys"] = float64(memStats.MCacheSys)
+	gauge["MSpanInuse"] = float64(memStats.MSpanInuse)
+	gauge["MSpanSys"] = float64(memStats.MSpanSys)
+	gauge["Mallocs"] = float64(memStats.Mallocs)
+	gauge["NextGC"] = float64(memStats.NextGC)
+	gauge["NumForcedGC"] = float64(memStats.NumForcedGC)
+	gauge["NumGC"] = float64(memStats.NumGC)
+	gauge["OtherSys"] = float64(memStats.OtherSys)
+	gauge["PauseTotalNs"] = float64(memStats.PauseTotalNs)
+	gauge["StackInuse"] = float64(memStats.StackInuse)
+	gauge["StackSys"] = float64(memStats.StackSys)
+	gauge["Sys"] = float64(memStats.Sys)
+	gauge["TotalAlloc"] = float64(memStats.TotalAlloc)
+	gauge["RandomValue"] = rand.Float64()
+
+	for n, m := range gauge {
+		output <- oneGaugeMetric{
+			name: n,
+			metric: m,
+		}
+	}
+}
+
+func getGopsutilMetrics(wg *sync.WaitGroup, )

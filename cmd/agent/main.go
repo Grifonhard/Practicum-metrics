@@ -24,6 +24,7 @@ type CFG struct {
 	ReportInterval *int    `env:"REPORT_INTERVAL"`
 	PollInterval   *int    `env:"POLL_INTERVAL"`
 	Key			   *string `env:"KEY"`
+	RateLimit	   *int	   `env:"RATE_LIMIT"`
 }
 
 func main() {
@@ -31,6 +32,7 @@ func main() {
 	reportInterval := flag.Int("r", DEFAULTREPORTINTERVAL, "секунд частота отправки метрик")
 	pollInterval := flag.Int("p", DEFAULTPOLLINTERVAL, "секунд частота опроса метрик")
 	key := flag.String("k", "", "ключ для хэша")
+	rateLimit := flag.Int("l", 0, "ограничение количества одновременно исходящих запросов")
 
 	flag.Parse()
 
@@ -51,6 +53,9 @@ func main() {
 	}
 	if cfg.Key != nil {
 		key = cfg.Key
+	}
+	if cfg.RateLimit != nil {
+		rateLimit = cfg.RateLimit
 	}
 
 	generator := metgen.New()
