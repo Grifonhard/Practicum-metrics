@@ -207,12 +207,16 @@ func SendMetricWithWorkerPool(url string, gen *metgen.MetGen, keyHash string, ra
         case err := <- errChan:
             logger.Error(fmt.Sprintf("fail while sending metrics: %s\n", err.Error()))
             cancel()
-            // очищаем каналы
-            for _ = range collect1 {
+            // очищаем каналы чтобы функции передающие данные в момент cancel прервали работу
+            // static test не даёт использовать _
+            for drop := range collect1 {
+                logger.Info(fmt.Sprintf("%v dropped", drop))
             }
-            for _ = range collect2 {
+            for drop := range collect2 {
+                logger.Info(fmt.Sprintf("%v dropped", drop))
             }
-            for _ = range workerChan {
+            for drop := range workerChan {
+                logger.Info(fmt.Sprintf("%v dropped", drop))
             }
         }
     }()

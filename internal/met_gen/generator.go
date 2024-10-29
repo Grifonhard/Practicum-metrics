@@ -67,12 +67,16 @@ func (mg *MetGen) Renew() error {
 		mg.MetricsGauge[one.Name] = one.Metric
 	case err := <- errChan:
 		cancel()
-		// опустошаем каналы
-		for _ = range input1 {
+		// очищаем каналы чтобы функции передающие данные в момент cancel прервали работу
+        // static test не даёт использовать _
+		for drop := range input1 {
+			logger.Info(fmt.Sprintf("%v dropped", drop))
 		}
-		for _ = range input2 {
+		for drop := range input2 {
+			logger.Info(fmt.Sprintf("%v dropped", drop))
 		}
-		for _ = range errChan {
+		for drop := range errChan {
+			logger.Info(fmt.Sprintf("%v dropped", drop))
 		}
 		return err
 	}
