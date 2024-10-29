@@ -287,7 +287,6 @@ func sendWorker(ctx context.Context, wg *sync.WaitGroup, url, keyHash string, in
                 return
             }
             logger.Info(fmt.Sprintf("one metric send, status: %s\n", resp.Status))
-            return
         }
     }
 }
