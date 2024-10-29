@@ -1,9 +1,16 @@
 package metgen
 
 import (
+	"context"
+	"fmt"
 	"math/rand"
 	"runtime"
 	"sync"
+	"time"
+
+	"github.com/Grifonhard/Practicum-metrics/internal/logger"
+	"github.com/shirou/gopsutil/cpu"
+	"github.com/shirou/gopsutil/mem"
 )
 
 type MetricsGenerator interface {
@@ -14,7 +21,7 @@ type MetricsGenerator interface {
 type MetGen struct {
 	MetricsGauge   map[string]float64 //метрики float64
 	MetricsCounter map[string]int64   //метрики int64
-	mu sync.Mutex
+	mu sync.RWMutex
 }
 
 type oneGaugeMetric struct {
@@ -32,11 +39,39 @@ func New() *MetGen {
 func (mg *MetGen) Renew() error {
 	mg.mu.Lock()
 	defer mg.mu.Unlock()
-	var wg sync.WaitGroup
+	input1 := make(chan oneGaugeMetric)
+	input2 := make(chan oneGaugeMetric)
+	errChan := make(chan error)
+	ctx, cancel := context.WithCancel(context.Background())
+	var closed int
 
+	go getGopsutilMetrics(ctx, input1, errChan)
+	go getStandartMetrics(ctx, input2, errChan)
 
+	select {
+	case one, ok := <- input1:
+		if !ok {
+			closed++
+		}
+		if closed == 2 {
+			break
+		}
+		mg.MetricsGauge[one.name] = one.metric
+	case one, ok := <- input2:
+		if !ok {
+			closed++
+		}
+		if closed == 2 {
+			break
+		}
+		mg.MetricsGauge[one.name] = one.metric
+	case err := <- errChan:
+		cancel()
+		<- input1
+		<- input2
+		return err
+	}
 	mg.MetricsCounter["PollCount"]++
-	wg.Wait()
 
 	return nil
 }
@@ -55,8 +90,8 @@ func (mg *MetGen) Collect() (map[string]float64, map[string]int64, error) {
 	return gg, cntr, nil
 }
 
-func getStandartMetrics(wg *sync.WaitGroup, output chan <- oneGaugeMetric) {
-	defer wg.Done()
+func getStandartMetrics(ctx context.Context, output chan oneGaugeMetric, errChan chan error) {
+	defer close(output)
 	var memStats runtime.MemStats
 	runtime.ReadMemStats(&memStats)
 	gauge := make(map[string]float64)
@@ -90,12 +125,53 @@ func getStandartMetrics(wg *sync.WaitGroup, output chan <- oneGaugeMetric) {
 	gauge["TotalAlloc"] = float64(memStats.TotalAlloc)
 	gauge["RandomValue"] = rand.Float64()
 
-	for n, m := range gauge {
-		output <- oneGaugeMetric{
-			name: n,
-			metric: m,
+	select {
+	case <- ctx.Done():
+		return
+	default:
+		for n, m := range gauge {
+			output <- oneGaugeMetric{
+				name: n,
+				metric: m,
+			}
 		}
 	}
 }
 
-func getGopsutilMetrics(wg *sync.WaitGroup, )
+func getGopsutilMetrics(ctx context.Context, output chan oneGaugeMetric, errChan chan error) {
+	defer close(output)
+	gauge := make(map[string]float64)
+
+	vm, err := mem.VirtualMemory()
+	if err != nil {
+		logger.Error(fmt.Sprintf("Ошибка при получении информации о памяти: %v", err))
+		errChan <- err
+		return
+	}
+	if vm != nil {
+		gauge["TotalMemory"] = float64(vm.Total)
+		gauge["FreeMemory"] = float64(vm.Free)
+	}
+
+	cpuUtilization, err := cpu.Percent(1*time.Second, false)
+    if err != nil {
+        logger.Error(fmt.Sprintf("Ошибка при получении загрузки CPU: %v", err))
+		errChan <- err
+		return
+    }
+	if len(cpuUtilization) != 0 {
+		gauge["CpuUtilization"] = cpuUtilization[0]
+	}
+
+	select {
+	case <- ctx.Done():
+		return
+	default:
+		for n, m := range gauge {
+			output <- oneGaugeMetric{
+				name: n,
+				metric: m,
+			}
+		}
+	}
+}
