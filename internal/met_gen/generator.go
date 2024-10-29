@@ -24,9 +24,9 @@ type MetGen struct {
 	mu sync.RWMutex
 }
 
-type oneGaugeMetric struct {
-	name string
-	metric float64
+type OneMetric struct {
+	Name string
+	Metric float64
 }
 
 func New() *MetGen {
@@ -39,8 +39,8 @@ func New() *MetGen {
 func (mg *MetGen) Renew() error {
 	mg.mu.Lock()
 	defer mg.mu.Unlock()
-	input1 := make(chan oneGaugeMetric)
-	input2 := make(chan oneGaugeMetric)
+	input1 := make(chan OneMetric)
+	input2 := make(chan OneMetric)
 	errChan := make(chan error)
 	ctx, cancel := context.WithCancel(context.Background())
 	var closed int
@@ -56,7 +56,7 @@ func (mg *MetGen) Renew() error {
 		if closed == 2 {
 			break
 		}
-		mg.MetricsGauge[one.name] = one.metric
+		mg.MetricsGauge[one.Name] = one.Metric
 	case one, ok := <- input2:
 		if !ok {
 			closed++
@@ -64,24 +64,28 @@ func (mg *MetGen) Renew() error {
 		if closed == 2 {
 			break
 		}
-		mg.MetricsGauge[one.name] = one.metric
+		mg.MetricsGauge[one.Name] = one.Metric
 	case err := <- errChan:
 		cancel()
-		<- input1
-		<- input2
+		// опустошаем каналы
+		for _ = range input1 {
+		}
+		for _ = range input2 {
+		}
+		for _ = range errChan {
+		}
 		return err
 	}
 	mg.MetricsCounter["PollCount"]++
 
-	// это для statictest
 	cancel()
 
 	return nil
 }
 
 func (mg *MetGen) Collect() (map[string]float64, map[string]int64, error) {
-	mg.mu.Lock()
-	defer mg.mu.Unlock()
+	mg.mu.RLock()
+	defer mg.mu.RUnlock()
 	gg := make(map[string]float64)
 	cntr := make(map[string]int64)
 	for k, v := range mg.MetricsGauge {
@@ -93,7 +97,45 @@ func (mg *MetGen) Collect() (map[string]float64, map[string]int64, error) {
 	return gg, cntr, nil
 }
 
-func getStandartMetrics(ctx context.Context, output chan oneGaugeMetric, errChan chan error) {
+func (mg *MetGen) CollectGaugeToChan(ctx context.Context, output chan OneMetric, errChan chan error) {
+	defer close(output)
+	mg.mu.RLock()
+	for k, v := range mg.MetricsGauge {
+		mg.mu.RUnlock()
+		select {
+		case <- ctx.Done():
+			return
+		default:
+			output <- OneMetric{
+				Name: k,
+				Metric: v,
+			}
+		}
+		mg.mu.RLock()
+	}
+	mg.mu.RUnlock()
+}
+
+func (mg *MetGen) CollectCounterToChan(ctx context.Context, output chan OneMetric, errChan chan error) {
+	defer close(output)
+	mg.mu.RLock()
+	for k, v := range mg.MetricsCounter {
+		mg.mu.RUnlock()
+		select {
+		case <- ctx.Done():
+			return
+		default:
+			output <- OneMetric{
+				Name: k,
+				Metric: float64(v),
+			}
+		}
+		mg.mu.RLock()
+	}
+	mg.mu.RUnlock()
+}
+
+func getStandartMetrics(ctx context.Context, output chan OneMetric, errChan chan error) {
 	defer close(output)
 	var memStats runtime.MemStats
 	runtime.ReadMemStats(&memStats)
@@ -133,15 +175,15 @@ func getStandartMetrics(ctx context.Context, output chan oneGaugeMetric, errChan
 		return
 	default:
 		for n, m := range gauge {
-			output <- oneGaugeMetric{
-				name: n,
-				metric: m,
+			output <- OneMetric{
+				Name: n,
+				Metric: m,
 			}
 		}
 	}
 }
 
-func getGopsutilMetrics(ctx context.Context, output chan oneGaugeMetric, errChan chan error) {
+func getGopsutilMetrics(ctx context.Context, output chan OneMetric, errChan chan error) {
 	defer close(output)
 	gauge := make(map[string]float64)
 
@@ -171,9 +213,9 @@ func getGopsutilMetrics(ctx context.Context, output chan oneGaugeMetric, errChan
 		return
 	default:
 		for n, m := range gauge {
-			output <- oneGaugeMetric{
-				name: n,
-				metric: m,
+			output <- OneMetric{
+				Name: n,
+				Metric: m,
 			}
 		}
 	}

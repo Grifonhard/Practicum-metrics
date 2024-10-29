@@ -58,8 +58,6 @@ func main() {
 		rateLimit = cfg.RateLimit
 	}
 
-	fmt.Println(*rateLimit)
-
 	generator := metgen.New()
 
 	timerPoll := time.NewTicker(time.Duration(*pollInterval) * time.Second)
@@ -78,7 +76,11 @@ func main() {
 				logger.Error(fmt.Sprintf("Fail renew metrics: %s\n", err.Error()))
 			}
 		case <-timerReport.C:
-			go webclient.SendMetric(fmt.Sprintf("http://%s/updates/", *address), generator, *key, webclient.SENDARRAY)
+			if *rateLimit == 0 {
+				go webclient.SendMetric(fmt.Sprintf("http://%s/updates/", *address), generator, *key, webclient.SENDARRAY)
+			} else {
+				go webclient.SendMetricWithWorkerPool(fmt.Sprintf("http://%s/updates/", *address), generator, *key, *rateLimit)
+			}
 		}
 	}
 }

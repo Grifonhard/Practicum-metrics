@@ -25,7 +25,7 @@ func TestCompressBeforeSend(t *testing.T) {
 	inputBuffer := bytes.NewBuffer(inputData)
 
 	// Вызов функции
-	compressedBuffer, err := compressBeforeSend(inputBuffer)
+	compressedBuffer, err := compressBeforeSend(inputBuffer.Bytes())
 	require.NoError(t, err, "compressBeforeSend вернула ошибку")
 
 	// Распаковка данных для проверки
