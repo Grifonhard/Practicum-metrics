@@ -58,6 +58,8 @@ func main() {
 		rateLimit = cfg.RateLimit
 	}
 
+	fmt.Println(*rateLimit)
+
 	generator := metgen.New()
 
 	timerPoll := time.NewTicker(time.Duration(*pollInterval) * time.Second)
