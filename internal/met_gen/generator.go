@@ -54,6 +54,8 @@ func (mg *MetGen) Renew() error {
 			closed++
 		}
 		if closed == 2 {
+			// это для statictest
+			cancel()
 			break
 		}
 		mg.MetricsGauge[one.name] = one.metric
@@ -62,6 +64,8 @@ func (mg *MetGen) Renew() error {
 			closed++
 		}
 		if closed == 2 {
+			// это для statictest
+			cancel()
 			break
 		}
 		mg.MetricsGauge[one.name] = one.metric
