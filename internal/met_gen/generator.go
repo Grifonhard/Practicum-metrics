@@ -48,38 +48,41 @@ func (mg *MetGen) Renew() error {
 	go getGopsutilMetrics(ctx, input1, errChan)
 	go getStandartMetrics(ctx, input2, errChan)
 
-	select {
-	case one, ok := <- input1:
-		if !ok {
-			closed++
+	loop:
+		for {
+			select {
+			case one, ok := <- input1:
+				if !ok {
+					closed++
+				}
+				if closed == 2 {
+					break loop
+				}
+				mg.MetricsGauge[one.Name] = one.Metric
+			case one, ok := <- input2:
+				if !ok {
+					closed++
+				}
+				if closed == 2 {
+					break loop
+				}
+				mg.MetricsGauge[one.Name] = one.Metric
+			case err := <- errChan:
+				cancel()
+				// очищаем каналы чтобы функции передающие данные в момент cancel прервали работу
+				// static test не даёт использовать _
+				for drop := range input1 {
+					logger.Info(fmt.Sprintf("%v dropped", drop))
+				}
+				for drop := range input2 {
+					logger.Info(fmt.Sprintf("%v dropped", drop))
+				}
+				for drop := range errChan {
+					logger.Info(fmt.Sprintf("%v dropped", drop))
+				}
+				return err
+			}
 		}
-		if closed == 2 {
-			break
-		}
-		mg.MetricsGauge[one.Name] = one.Metric
-	case one, ok := <- input2:
-		if !ok {
-			closed++
-		}
-		if closed == 2 {
-			break
-		}
-		mg.MetricsGauge[one.Name] = one.Metric
-	case err := <- errChan:
-		cancel()
-		// очищаем каналы чтобы функции передающие данные в момент cancel прервали работу
-        // static test не даёт использовать _
-		for drop := range input1 {
-			logger.Info(fmt.Sprintf("%v dropped", drop))
-		}
-		for drop := range input2 {
-			logger.Info(fmt.Sprintf("%v dropped", drop))
-		}
-		for drop := range errChan {
-			logger.Info(fmt.Sprintf("%v dropped", drop))
-		}
-		return err
-	}
 	mg.MetricsCounter["PollCount"]++
 
 	cancel()
@@ -174,11 +177,11 @@ func getStandartMetrics(ctx context.Context, output chan OneMetric, errChan chan
 	gauge["TotalAlloc"] = float64(memStats.TotalAlloc)
 	gauge["RandomValue"] = rand.Float64()
 
-	select {
-	case <- ctx.Done():
-		return
-	default:
-		for n, m := range gauge {
+	for n, m := range gauge {
+		select {
+		case <- ctx.Done():
+			return
+		default:
 			output <- OneMetric{
 				Name: n,
 				Metric: m,
@@ -212,15 +215,15 @@ func getGopsutilMetrics(ctx context.Context, output chan OneMetric, errChan chan
 		gauge["CpuUtilization"] = cpuUtilization[0]
 	}
 
-	select {
-	case <- ctx.Done():
-		return
-	default:
-		for n, m := range gauge {
+	for n, m := range gauge {
+		select {
+		case <- ctx.Done():
+			return
+		default:
 			output <- OneMetric{
 				Name: n,
 				Metric: m,
 			}
-		}
+		}	
 	}
 }
