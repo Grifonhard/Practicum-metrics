@@ -293,16 +293,16 @@ func sendWorker(ctx context.Context, wg *sync.WaitGroup, url, keyHash string, in
 
 func fanIn(ctx context.Context, inputG, inputC chan metgen.OneMetric, output chan Metrics) {
     defer close(output)
-    var closed int
+    var closed [2]int
     for {
         select {
         case <- ctx.Done():
             return
         case one, ok := <- inputG:
             if !ok {
-                closed++
+                closed[0] = 1
             }
-            if closed == 2 {
+            if closed[0] == 1 && closed[1] == 1 {
                 return
             }
             var metric Metrics
@@ -313,9 +313,9 @@ func fanIn(ctx context.Context, inputG, inputC chan metgen.OneMetric, output cha
             output <- metric
         case one, ok := <- inputC:
             if !ok {
-                closed++
+                closed[1] = 1
             }
-            if closed == 2 {
+            if closed[0] == 1 && closed[1] == 1 {
                 return
             }
             var metric Metrics

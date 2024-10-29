@@ -43,7 +43,7 @@ func (mg *MetGen) Renew() error {
 	input2 := make(chan OneMetric)
 	errChan := make(chan error)
 	ctx, cancel := context.WithCancel(context.Background())
-	var closed int
+	var closed [2]int
 
 	go getGopsutilMetrics(ctx, input1, errChan)
 	go getStandartMetrics(ctx, input2, errChan)
@@ -53,17 +53,17 @@ func (mg *MetGen) Renew() error {
 			select {
 			case one, ok := <- input1:
 				if !ok {
-					closed++
+					closed[0] = 1
 				}
-				if closed == 2 {
+				if closed[0] == 1 && closed[1] == 1 {
 					break loop
 				}
 				mg.MetricsGauge[one.Name] = one.Metric
 			case one, ok := <- input2:
 				if !ok {
-					closed++
+					closed[1] = 1
 				}
-				if closed == 2 {
+				if closed[0] == 1 && closed[1] == 1 {
 					break loop
 				}
 				mg.MetricsGauge[one.Name] = one.Metric
