@@ -178,9 +178,9 @@ func computeHMAC(value, key string) string {
 }
 
 func SendMetricWithWorkerPool(url string, gen *metgen.MetGen, keyHash string, rateLimit int) {
-	collect1 := make(chan metgen.OneMetric)
-    collect2 := make(chan metgen.OneMetric)
-    workerChan := make(chan metgen.OneMetric)
+	collectG := make(chan metgen.OneMetric) 
+    collectC := make(chan metgen.OneMetric)
+    workerChan := make(chan Metrics)
     errChan := make(chan error)
     ctx, cancel := context.WithCancel(context.Background())
     var wg sync.WaitGroup
@@ -193,11 +193,11 @@ func SendMetricWithWorkerPool(url string, gen *metgen.MetGen, keyHash string, ra
     }
 
     // запуск генераторов
-    go gen.CollectGaugeToChan(ctx, collect1, errChan)
-    go gen.CollectCounterToChan(ctx, collect2, errChan)
+    go gen.CollectGaugeToChan(ctx, collectG, errChan)
+    go gen.CollectCounterToChan(ctx, collectC, errChan)
 
     // собираем данные в канал для воркеров
-    go fanIn(ctx, collect1, collect2, workerChan)
+    go fanIn(ctx, collectG, collectC, workerChan)
 
     // обработка ошибок
     go func() {
@@ -209,10 +209,10 @@ func SendMetricWithWorkerPool(url string, gen *metgen.MetGen, keyHash string, ra
             cancel()
             // очищаем каналы чтобы функции передающие данные в момент cancel прервали работу
             // static test не даёт использовать _
-            for drop := range collect1 {
+            for drop := range collectG {
                 logger.Info(fmt.Sprintf("%v dropped", drop))
             }
-            for drop := range collect2 {
+            for drop := range collectC {
                 logger.Info(fmt.Sprintf("%v dropped", drop))
             }
             for drop := range workerChan {
@@ -229,7 +229,7 @@ func SendMetricWithWorkerPool(url string, gen *metgen.MetGen, keyHash string, ra
     logger.Info("sending with workers is over")
 }
 
-func sendWorker(ctx context.Context, wg *sync.WaitGroup, url, keyHash string, input chan metgen.OneMetric, errChan chan error) {
+func sendWorker(ctx context.Context, wg *sync.WaitGroup, url, keyHash string, input chan Metrics, errChan chan error) {
     defer wg.Done()
     for {
         select {
@@ -239,7 +239,7 @@ func sendWorker(ctx context.Context, wg *sync.WaitGroup, url, keyHash string, in
             if !ok {
                 return
             }
-            oneMar, err := json.Marshal(one)
+            oneMar, err := json.Marshal([]Metrics{one})
             if err != nil {
                 errChan <- err
                 return
@@ -286,35 +286,45 @@ func sendWorker(ctx context.Context, wg *sync.WaitGroup, url, keyHash string, in
                 errChan <- err
                 return
             }
-            logger.Info(fmt.Sprintf("success one metric send, status: %s\n", resp.Status))
+            logger.Info(fmt.Sprintf("one metric send, status: %s\n", resp.Status))
             return
         }
     }
 }
 
-func fanIn(ctx context.Context, input1, input2, output chan metgen.OneMetric) {
+func fanIn(ctx context.Context, inputG, inputC chan metgen.OneMetric, output chan Metrics) {
     defer close(output)
     var closed int
     for {
         select {
         case <- ctx.Done():
             return
-        case one, ok := <- input1:
+        case one, ok := <- inputG:
             if !ok {
                 closed++
             }
             if closed == 2 {
                 return
             }
-            output <- one
-        case one, ok := <- input2:
+            var metric Metrics
+			metric.ID = one.Name
+			metric.MType = storage.TYPEGAUGE
+			val := one.Metric
+			metric.Value = &val
+            output <- metric
+        case one, ok := <- inputC:
             if !ok {
                 closed++
             }
             if closed == 2 {
                 return
             }
-            output <- one
+            var metric Metrics
+			metric.ID = one.Name
+			metric.MType = storage.TYPECOUNTER
+			dlt := int64(one.Metric)
+			metric.Delta = &dlt
+            output <- metric
         }
     }
 }
