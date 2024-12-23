@@ -230,7 +230,11 @@ func SendMetricWithWorkerPool(url string, gen *metgen.MetGen, keyHash string, ra
 }
 
 func sendWorker(ctx context.Context, wg *sync.WaitGroup, url, keyHash string, input chan Metrics, errChan chan error) {
-    defer wg.Done()
+	defer wg.Done()
+	//какого-то хрена заголовок Accept-Encoding gzip устанавливается автоматически в клиенте по умолчанию
+	cl := &http.Client{
+		Timeout: time.Minute,
+	}
     for {
         select {
         case <- ctx.Done():
@@ -261,10 +265,6 @@ func sendWorker(ctx context.Context, wg *sync.WaitGroup, url, keyHash string, in
             }
             req.Header.Set("Content-Type", "application/json")
             req.Header.Set("Content-Encoding", "gzip")
-            //какого-то хрена заголовок Accept-Encoding gzip устанавливается автоматически в клиенте по умолчанию
-            cl := &http.Client{
-                Timeout: time.Minute,
-            }
     
             var resp *http.Response
             var errCollect []error
