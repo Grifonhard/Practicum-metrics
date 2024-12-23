@@ -23,12 +23,16 @@ type CFG struct {
 	Addr           *string `env:"ADDRESS"`
 	ReportInterval *int    `env:"REPORT_INTERVAL"`
 	PollInterval   *int    `env:"POLL_INTERVAL"`
+	Key			   *string `env:"KEY"`
+	RateLimit	   *int	   `env:"RATE_LIMIT"`
 }
 
 func main() {
 	address := flag.String("a", DEFAULTADDR, "адрес сервера")
 	reportInterval := flag.Int("r", DEFAULTREPORTINTERVAL, "секунд частота отправки метрик")
 	pollInterval := flag.Int("p", DEFAULTPOLLINTERVAL, "секунд частота опроса метрик")
+	key := flag.String("k", "", "ключ для хэша")
+	rateLimit := flag.Int("l", 0, "ограничение количества одновременно исходящих запросов")
 
 	flag.Parse()
 
@@ -46,6 +50,12 @@ func main() {
 	}
 	if cfg.ReportInterval != nil {
 		reportInterval = cfg.ReportInterval
+	}
+	if cfg.Key != nil {
+		key = cfg.Key
+	}
+	if cfg.RateLimit != nil {
+		rateLimit = cfg.RateLimit
 	}
 
 	generator := metgen.New()
@@ -66,7 +76,11 @@ func main() {
 				logger.Error(fmt.Sprintf("Fail renew metrics: %s\n", err.Error()))
 			}
 		case <-timerReport.C:
-			go webclient.SendMetric(fmt.Sprintf("http://%s/updates", *address), generator, webclient.SENDARRAY)
+			if *rateLimit == 0 {
+				go webclient.SendMetric(fmt.Sprintf("http://%s/updates/", *address), generator, *key, webclient.SENDARRAY)
+			} else {
+				go webclient.SendMetricWithWorkerPool(fmt.Sprintf("http://%s/updates/", *address), generator, *key, *rateLimit)
+			}
 		}
 	}
 }
