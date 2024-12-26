@@ -1,12 +1,13 @@
 package fileio
 
 import (
+	"encoding/gob"
+	"errors"
 	"fmt"
+	"io"
 	"io/fs"
 	"os"
 	"time"
-	"errors"
-	"encoding/gob"
 
 	"github.com/Grifonhard/Practicum-metrics/internal/logger"
 )
@@ -99,7 +100,7 @@ func (f *File) readFromFileRetry(data *Data) (err error) {
 		decoder := gob.NewDecoder(f.file)
 
 		err = decoder.Decode(&data)
-		if err != nil {
+		if err != nil && !errors.Is(err, io.EOF) {
 			if i == MAXRETRIES {
 				logger.Error(fmt.Sprintf("problem with read file: %s\n", errors.Join(errCollect...).Error()))
 				logger.Error(fmt.Sprintf("Файл %s поврежден, удаляю...\n", f.fullpath))
@@ -127,5 +128,5 @@ func (f *File) readFromFileRetry(data *Data) (err error) {
 	if errCollect != nil {
 		logger.Error(fmt.Sprintf("problem with read file: %s\n", errors.Join(errCollect...).Error()))
 	}
-	return err
+	return nil
 }
