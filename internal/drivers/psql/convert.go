@@ -6,7 +6,8 @@ import (
 	"strings"
 )
 
-const METRICSEPARATOR = "///" // METRICSEPARATOR - разделитель для хранения типа и имени в одном поле в БД
+// METRICSEPARATOR - разделитель для хранения типа и имени в одном поле в БД
+const METRICSEPARATOR = "///"
 
 // Metric хранит в себе метрику в формате БД
 type Metric struct {
