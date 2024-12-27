@@ -13,22 +13,28 @@ import (
 	"github.com/shirou/gopsutil/mem"
 )
 
+// MetricsGenerator интерфейс генератора данных метрик
+//  Renew - обноление метрик
+//  Collect - получение данных по метрикам
 type MetricsGenerator interface {
 	Renew() error
 	Collect() (gauge map[string]string, counter map[string]string, err error)
 }
 
+// MetGen хранит в себе метрики
 type MetGen struct {
 	MetricsGauge   map[string]float64 //метрики float64
 	MetricsCounter map[string]int64   //метрики int64
 	mu             sync.RWMutex
 }
 
+// OneMetric одна метрика
 type OneMetric struct {
 	Name   string
 	Metric float64
 }
 
+// New создание хранилки для метрик
 func New() *MetGen {
 	var mg MetGen
 	mg.MetricsGauge = make(map[string]float64)
@@ -36,10 +42,11 @@ func New() *MetGen {
 	return &mg
 }
 
-// для тестов
+// для тестирования
 var getGopsutilMetricsFunc = getGopsutilMetrics
 var getStandartMetricsFunc = getStandartMetrics
 
+// Renew обновление данных по метрикам
 func (mg *MetGen) Renew() error {
 	mg.mu.Lock()
 	defer mg.mu.Unlock()
@@ -94,6 +101,7 @@ loop:
 	return nil
 }
 
+// Collect сбор метрик
 func (mg *MetGen) Collect() (map[string]float64, map[string]int64, error) {
 	mg.mu.RLock()
 	defer mg.mu.RUnlock()
@@ -108,6 +116,8 @@ func (mg *MetGen) Collect() (map[string]float64, map[string]int64, error) {
 	return gg, cntr, nil
 }
 
+// CollectGaugeToChan сбор данных по метрикам типа Gauge 
+// для использования в горутинах
 func (mg *MetGen) CollectGaugeToChan(ctx context.Context, output chan OneMetric, errChan chan error) {
 	defer close(output)
 	mg.mu.RLock()
@@ -127,6 +137,8 @@ func (mg *MetGen) CollectGaugeToChan(ctx context.Context, output chan OneMetric,
 	mg.mu.RUnlock()
 }
 
+// CollectCounterToChan сбор данных по метрикам типа Counter 
+// для использования в горутинах
 func (mg *MetGen) CollectCounterToChan(ctx context.Context, output chan OneMetric, errChan chan error) {
 	defer close(output)
 	mg.mu.RLock()
@@ -146,6 +158,7 @@ func (mg *MetGen) CollectCounterToChan(ctx context.Context, output chan OneMetri
 	mg.mu.RUnlock()
 }
 
+// getStandartMetrics получение метрик через пакет runtime
 func getStandartMetrics(ctx context.Context, output chan OneMetric, errChan chan error) {
 	defer close(output)
 	var memStats runtime.MemStats
@@ -194,6 +207,7 @@ func getStandartMetrics(ctx context.Context, output chan OneMetric, errChan chan
 	}
 }
 
+// getGopsutilMetrics получение метрик через пакет gopsutil
 func getGopsutilMetrics(ctx context.Context, output chan OneMetric, errChan chan error) {
 	defer close(output)
 	gauge := make(map[string]float64)
