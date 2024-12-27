@@ -1,6 +1,9 @@
 package storage
 
 import (
+	"context"
+	"database/sql"
+	"database/sql/driver"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -9,9 +12,6 @@ import (
 	"sync"
 	"testing"
 	"time"
-	"context"
-	"database/sql"
-	"database/sql/driver"
 
 	"github.com/Grifonhard/Practicum-metrics/internal/logger"
 	"github.com/Grifonhard/Practicum-metrics/internal/storage/fileio"
@@ -26,7 +26,7 @@ func (m *MockLogger) Write(p []byte) (n int, err error) {
 }
 
 type MockDB struct {
-	mu           sync.Mutex
+	mu             sync.Mutex
 	metricsGauge   map[string]float64
 	metricsCounter map[string][]float64
 }
@@ -88,8 +88,8 @@ func (m *MockDB) QueryRowContext(ctx context.Context, query string, args ...any)
 }
 func (m *MockDB) SetConnMaxIdleTime(d time.Duration) {}
 func (m *MockDB) SetConnMaxLifetime(d time.Duration) {}
-func (m *MockDB) SetMaxIdleConns(n int) {}
-func (m *MockDB) SetMaxOpenConns(n int) {}
+func (m *MockDB) SetMaxIdleConns(n int)              {}
+func (m *MockDB) SetMaxOpenConns(n int)              {}
 func (m *MockDB) Stats() sql.DBStats {
 	return sql.DBStats{}
 }
@@ -628,7 +628,7 @@ func TestValidateAndConvert(t *testing.T) {
 }
 
 func TestPush(t *testing.T) {
-	stor, err := New(0, "", false,nil)
+	stor, err := New(0, "", false, nil)
 	assert.NoError(t, err)
 
 	metrics := []Metric{
@@ -654,8 +654,8 @@ func TestPush(t *testing.T) {
 		},
 	}
 
-	go func(){
-		for range stor.backupChan{
+	go func() {
+		for range stor.backupChan {
 		}
 	}()
 

@@ -101,7 +101,7 @@ func Updates(stor *storage.MemStorage) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		var buf bytes.Buffer
 		c.Header("Content-Type", "application/json; charset=utf-8")
-		_, err := buf.ReadFrom(c.Request.Body)		
+		_, err := buf.ReadFrom(c.Request.Body)
 		if err != nil {
 			respondWithError(c, http.StatusBadRequest, "fail while read to buffer error", "fail read data", err)
 			return
@@ -234,7 +234,7 @@ func PingDB(db *psql.DB) gin.HandlerFunc {
 }
 
 func respondWithError(c *gin.Context, status int, logMessage string, userMessage string, err error) {
-    logger.Error(fmt.Sprintf("%s: %s", logMessage, err.Error()))
-    c.JSON(status, gin.H{"error": userMessage})
-    c.Abort()
+	logger.Error(fmt.Sprintf("%s: %s", logMessage, err.Error()))
+	c.JSON(status, gin.H{"error": userMessage})
+	c.Abort()
 }

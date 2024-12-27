@@ -26,7 +26,7 @@ type CFG struct {
 	FileStoragePath *string `env:"FILE_STORAGE_PATH"`
 	Restore         *bool   `env:"RESTORE"`
 	DatabaseDsn     *string `env:"DATABASE_DSN"`
-	Key			    *string `env:"KEY"`
+	Key             *string `env:"KEY"`
 }
 
 func main() {

@@ -178,55 +178,54 @@ func computeHMAC(value, key string) string {
 }
 
 func SendMetricWithWorkerPool(url string, gen *metgen.MetGen, keyHash string, rateLimit int) {
-	collectG := make(chan metgen.OneMetric) 
-    collectC := make(chan metgen.OneMetric)
-    workerChan := make(chan Metrics)
-    errChan := make(chan error)
-    ctx, cancel := context.WithCancel(context.Background())
-    var wg sync.WaitGroup
-    
+	collectG := make(chan metgen.OneMetric)
+	collectC := make(chan metgen.OneMetric)
+	workerChan := make(chan Metrics)
+	errChan := make(chan error)
+	ctx, cancel := context.WithCancel(context.Background())
+	var wg sync.WaitGroup
 
-    // запускаем пул воркеров
-    for i := 0; i < rateLimit; i++ {
-        wg.Add(1)
-        go sendWorker(ctx, &wg, url, keyHash, workerChan, errChan)
-    }
+	// запускаем пул воркеров
+	for i := 0; i < rateLimit; i++ {
+		wg.Add(1)
+		go sendWorker(ctx, &wg, url, keyHash, workerChan, errChan)
+	}
 
-    // запуск генераторов
-    go gen.CollectGaugeToChan(ctx, collectG, errChan)
-    go gen.CollectCounterToChan(ctx, collectC, errChan)
+	// запуск генераторов
+	go gen.CollectGaugeToChan(ctx, collectG, errChan)
+	go gen.CollectCounterToChan(ctx, collectC, errChan)
 
-    // собираем данные в канал для воркеров
-    go fanIn(ctx, collectG, collectC, workerChan)
+	// собираем данные в канал для воркеров
+	go fanIn(ctx, collectG, collectC, workerChan)
 
-    // обработка ошибок
-    go func() {
-        select {
-        case <- ctx.Done():
-            return
-        case err := <- errChan:
-            logger.Error(fmt.Sprintf("fail while sending metrics: %s\n", err.Error()))
-            cancel()
-            // очищаем каналы чтобы функции передающие данные в момент cancel прервали работу
-            // static test не даёт использовать _
-            for drop := range collectG {
-                logger.Info(fmt.Sprintf("%v dropped", drop))
-            }
-            for drop := range collectC {
-                logger.Info(fmt.Sprintf("%v dropped", drop))
-            }
-            for drop := range workerChan {
-                logger.Info(fmt.Sprintf("%v dropped", drop))
-            }
-        }
-    }()
-    
-    wg.Wait()
+	// обработка ошибок
+	go func() {
+		select {
+		case <-ctx.Done():
+			return
+		case err := <-errChan:
+			logger.Error(fmt.Sprintf("fail while sending metrics: %s\n", err.Error()))
+			cancel()
+			// очищаем каналы чтобы функции передающие данные в момент cancel прервали работу
+			// static test не даёт использовать _
+			for drop := range collectG {
+				logger.Info(fmt.Sprintf("%v dropped", drop))
+			}
+			for drop := range collectC {
+				logger.Info(fmt.Sprintf("%v dropped", drop))
+			}
+			for drop := range workerChan {
+				logger.Info(fmt.Sprintf("%v dropped", drop))
+			}
+		}
+	}()
 
-    // для static
-    cancel()
-    
-    logger.Info("sending with workers is over")
+	wg.Wait()
+
+	// для static
+	cancel()
+
+	logger.Info("sending with workers is over")
 }
 
 func sendWorker(ctx context.Context, wg *sync.WaitGroup, url, keyHash string, input chan Metrics, errChan chan error) {
@@ -235,95 +234,95 @@ func sendWorker(ctx context.Context, wg *sync.WaitGroup, url, keyHash string, in
 	cl := &http.Client{
 		Timeout: time.Minute,
 	}
-    for {
-        select {
-        case <- ctx.Done():
-            return
-        case one, ok := <- input:
-            if !ok {
-                return
-            }
-            oneMar, err := json.Marshal([]Metrics{one})
-            if err != nil {
-                errChan <- err
-                return
-            }
-            compressed, err := compressBeforeSend(oneMar)
-            if err != nil {
-                errChan <- err
-                return
-            }
-            //подготовка реквеста и клиента
-            req, err := http.NewRequest(http.MethodPost, url, compressed)
-            if err != nil {
-                errChan <- err
-                return
-            }
-            if keyHash != "" {
-                hmacHash := computeHMAC(compressed.String(), keyHash)
-                req.Header.Set("HashSHA256", hmacHash)
-            }
-            req.Header.Set("Content-Type", "application/json")
-            req.Header.Set("Content-Encoding", "gzip")
-    
-            var resp *http.Response
-            var errCollect []error
-            for i := 0; i < MAXRETRIES; i++ {
-                resp, err = cl.Do(req)
-                if err != nil {
-                    time.Sleep(time.Second + RETRYINTERVALINCREASE*time.Duration(i))
-                    errCollect = append(errCollect, err)
-                    continue
-                } else {
-                    defer resp.Body.Close()
-                    break
-                }
-            }
-            if errCollect != nil {
-                logger.Error(fmt.Sprintf("problem with sending metrics: %s\n", errors.Join(errCollect...).Error()))
-            }
-            if err != nil {
-                errChan <- err
-                return
-            }
-            logger.Info(fmt.Sprintf("one metric send, status: %s\n", resp.Status))
-        }
-    }
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		case one, ok := <-input:
+			if !ok {
+				return
+			}
+			oneMar, err := json.Marshal([]Metrics{one})
+			if err != nil {
+				errChan <- err
+				return
+			}
+			compressed, err := compressBeforeSend(oneMar)
+			if err != nil {
+				errChan <- err
+				return
+			}
+			//подготовка реквеста и клиента
+			req, err := http.NewRequest(http.MethodPost, url, compressed)
+			if err != nil {
+				errChan <- err
+				return
+			}
+			if keyHash != "" {
+				hmacHash := computeHMAC(compressed.String(), keyHash)
+				req.Header.Set("HashSHA256", hmacHash)
+			}
+			req.Header.Set("Content-Type", "application/json")
+			req.Header.Set("Content-Encoding", "gzip")
+
+			var resp *http.Response
+			var errCollect []error
+			for i := 0; i < MAXRETRIES; i++ {
+				resp, err = cl.Do(req)
+				if err != nil {
+					time.Sleep(time.Second + RETRYINTERVALINCREASE*time.Duration(i))
+					errCollect = append(errCollect, err)
+					continue
+				} else {
+					defer resp.Body.Close()
+					break
+				}
+			}
+			if errCollect != nil {
+				logger.Error(fmt.Sprintf("problem with sending metrics: %s\n", errors.Join(errCollect...).Error()))
+			}
+			if err != nil {
+				errChan <- err
+				return
+			}
+			logger.Info(fmt.Sprintf("one metric send, status: %s\n", resp.Status))
+		}
+	}
 }
 
 func fanIn(ctx context.Context, inputG, inputC chan metgen.OneMetric, output chan Metrics) {
-    defer close(output)
-    var closed [2]int
-    for {
-        select {
-        case <- ctx.Done():
-            return
-        case one, ok := <- inputG:
-            if !ok {
-                closed[0] = 1
-            }
-            if closed[0] == 1 && closed[1] == 1 {
-                return
-            }
-            var metric Metrics
+	defer close(output)
+	var closed [2]int
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		case one, ok := <-inputG:
+			if !ok {
+				closed[0] = 1
+			}
+			if closed[0] == 1 && closed[1] == 1 {
+				return
+			}
+			var metric Metrics
 			metric.ID = one.Name
 			metric.MType = storage.TYPEGAUGE
 			val := one.Metric
 			metric.Value = &val
-            output <- metric
-        case one, ok := <- inputC:
-            if !ok {
-                closed[1] = 1
-            }
-            if closed[0] == 1 && closed[1] == 1 {
-                return
-            }
-            var metric Metrics
+			output <- metric
+		case one, ok := <-inputC:
+			if !ok {
+				closed[1] = 1
+			}
+			if closed[0] == 1 && closed[1] == 1 {
+				return
+			}
+			var metric Metrics
 			metric.ID = one.Name
 			metric.MType = storage.TYPECOUNTER
 			dlt := int64(one.Metric)
 			metric.Delta = &dlt
-            output <- metric
-        }
-    }
+			output <- metric
+		}
+	}
 }

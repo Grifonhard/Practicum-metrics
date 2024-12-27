@@ -13,7 +13,6 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-
 type mockLogger struct{}
 
 func (m *mockLogger) Write(p []byte) (n int, err error) {
@@ -210,19 +209,19 @@ func Test_writeToFileRetry(t *testing.T) {
 
 	t.Run("Ошибка при Truncate (или Seek)", func(t *testing.T) {
 		tmpDir := t.TempDir()
-	
+
 		// Создаем файл только для чтения
 		filePath := filepath.Join(tmpDir, "readonly_file")
 		roFile, err := os.OpenFile(filePath, os.O_CREATE|os.O_RDONLY, 0644)
 		require.NoError(t, err)
-	
+
 		t.Cleanup(func() { roFile.Close() })
-	
+
 		f := &File{
 			mu:   &sync.Mutex{},
-			file: roFile, 
+			file: roFile,
 		}
-	
+
 		err = f.writeToFileRetry(&Data{})
 		assert.Error(t, err)
 	})

@@ -1,6 +1,7 @@
 package webserver
 
 import (
+	"bytes"
 	"compress/gzip"
 	"crypto/hmac"
 	"crypto/sha256"
@@ -10,7 +11,6 @@ import (
 	"net/http"
 	"strings"
 	"time"
-	"bytes"
 
 	"github.com/Grifonhard/Practicum-metrics/internal/logger"
 	"github.com/gin-gonic/gin"
@@ -26,7 +26,7 @@ type respInfo struct {
 type loggingResponseWriter struct {
 	gin.ResponseWriter
 	respInfo *respInfo
-	key string			// на случай если потребуется работа с псевдоаутентификацией
+	key      string // на случай если потребуется работа с псевдоаутентификацией
 }
 
 func (lw *loggingResponseWriter) Write(data []byte) (int, error) {
@@ -53,7 +53,7 @@ func ReqRespLogger(key string) gin.HandlerFunc {
 		lw := &loggingResponseWriter{
 			ResponseWriter: c.Writer,
 			respInfo:       respInfo,
-			key:			key,
+			key:            key,
 		}
 
 		c.Writer = lw
@@ -199,20 +199,20 @@ func PseudoAuth(key string) gin.HandlerFunc {
 			c.Request.Body = io.NopCloser(bytes.NewBuffer(body))
 
 			receivedHash := c.GetHeader("HashSHA256")
-            if receivedHash == "" {
-                c.JSON(http.StatusBadRequest, gin.H{"error": "Missing HashSHA256 header"})
-                c.Abort()
-                return
-            }
+			if receivedHash == "" {
+				c.JSON(http.StatusBadRequest, gin.H{"error": "Missing HashSHA256 header"})
+				c.Abort()
+				return
+			}
 
 			expectedHash := computeHMAC(body, key)
-            if receivedHash != expectedHash {
-                c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid HMAC"})
-                c.Abort()
-                return
-            }
+			if receivedHash != expectedHash {
+				c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid HMAC"})
+				c.Abort()
+				return
+			}
 		}
-		
+
 		c.Next()
 	}
 }

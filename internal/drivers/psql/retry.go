@@ -2,8 +2,8 @@ package psql
 
 import (
 	"database/sql"
-	"time"
 	"errors"
+	"time"
 
 	"github.com/jackc/pgerrcode"
 	"github.com/jackc/pgx/v5/pgconn"
@@ -28,7 +28,7 @@ func openRetry(driverName string, dataSourceName string) (db *sql.DB, err error)
 			break
 		}
 	}
-	return 
+	return
 }
 
 func (db *DB) execRetry(query string, args ...any) (result sql.Result, err error) {

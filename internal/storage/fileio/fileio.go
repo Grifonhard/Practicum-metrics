@@ -24,7 +24,7 @@ func New(path, filename string) (*File, error) {
 	fullpath := filepath.Join(path, filename)
 	if path != "" {
 		err := os.MkdirAll(path, 0755)
-		if err != nil && !os.IsExist(err){
+		if err != nil && !os.IsExist(err) {
 			return nil, err
 		}
 		file, err = openFileRetry(fullpath, os.O_RDWR, 0666)
@@ -66,7 +66,7 @@ func (f *File) Read() (map[string]float64, map[string][]float64, error) {
 	if f.file == nil {
 		return data.ItemsGauge, data.ItemsCounter, nil
 	}
-	
+
 	err := f.readFromFileRetry(&data)
 	if err != nil {
 		return nil, nil, err

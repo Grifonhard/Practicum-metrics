@@ -21,14 +21,14 @@ type Stor interface {
 }
 
 type MemStorage struct {
-	DB psql.StorDB
-	ItemsGauge   map[string]float64
-	ItemsCounter map[string][]float64
-	backupChan   chan struct{}
-	backupTickerChan <- chan time.Time 
-	backupTicker *time.Ticker
-	backupFile   *fileio.File
-	mu           sync.Mutex
+	DB               psql.StorDB
+	ItemsGauge       map[string]float64
+	ItemsCounter     map[string][]float64
+	backupChan       chan struct{}
+	backupTickerChan <-chan time.Time
+	backupTicker     *time.Ticker
+	backupFile       *fileio.File
+	mu               sync.Mutex
 }
 
 type Metric struct {
