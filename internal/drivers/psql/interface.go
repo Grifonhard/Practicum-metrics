@@ -7,6 +7,7 @@ import (
 	"time"
 )
 
+// StorDB интерфейс для предоставления возможности вышестоящим сервисам мокировать DB
 type StorDB interface {
 	Begin() (*sql.Tx, error)
 	BeginTx(ctx context.Context, opts *sql.TxOptions) (*sql.Tx, error)

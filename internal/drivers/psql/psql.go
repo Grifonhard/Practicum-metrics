@@ -8,6 +8,7 @@ import (
 	_ "github.com/jackc/pgx/v5/stdlib"
 )
 
+// Названия полей и типы полей в базе данных
 const (
 	TABLENAME             = "metrics"
 	COLUMNMETRIC          = "metric"
@@ -16,10 +17,12 @@ const (
 	COLUMNMETRICVALUETYPE = "DOUBLE PRECISION"
 )
 
+// DB хранит в себе подключение к базе данных
 type DB struct {
 	*sql.DB
 }
 
+// ConnectDB подключение к базе данных
 func ConnectDB(dsn string) (*DB, error) {
 	db, err := openRetry("pgx", dsn)
 	if err == nil {
@@ -31,14 +34,17 @@ func ConnectDB(dsn string) (*DB, error) {
 	}
 }
 
+// PingDB пинг базы данных
 func (db *DB) PingDB() error {
 	return db.DB.Ping()
 }
 
+// Close закрытие соединения с базой данных 
 func (db *DB) Close() error {
 	return db.DB.Close()
 }
 
+// CreateMetricsTable создание таблицы для хранения метрик
 func (db *DB) CreateMetricsTable() error {
 	query := fmt.Sprintf(`CREATE TABLE IF NOT EXISTS %s (
 							%s %s,
@@ -52,6 +58,7 @@ func (db *DB) CreateMetricsTable() error {
 	return err
 }
 
+// PushReplace апдейт данных по метрикам
 func (db *DB) PushReplace(metric, metricName string, value float64) error {
 	ms := MetricString{
 		MetricType: metric,
@@ -78,6 +85,7 @@ func (db *DB) PushReplace(metric, metricName string, value float64) error {
 	return err
 }
 
+// PushAdd добавление данных о метриках
 func (db *DB) PushAdd(metric, metricName string, value float64) error {
 	ms := MetricString{
 		MetricType: metric,
@@ -92,6 +100,7 @@ func (db *DB) PushAdd(metric, metricName string, value float64) error {
 	return err
 }
 
+// GetOneValue получение значения одной метрики
 func (db *DB) GetOneValue(metric, metricName string) (float64, error) {
 	ms := MetricString{
 		MetricType: metric,
@@ -118,6 +127,7 @@ func (db *DB) GetOneValue(metric, metricName string) (float64, error) {
 	return value.Float64, nil
 }
 
+// GetArrayValues получения множества значений одной метрики
 func (db *DB) GetArrayValues(metric, metricName string) (values []float64, err error) {
 	ms := MetricString{
 		MetricType: metric,
@@ -157,6 +167,7 @@ func (db *DB) GetArrayValues(metric, metricName string) (values []float64, err e
 	return values, nil
 }
 
+// List получение всех данных по метрикам
 func (db *DB) List(metricOneValue, metricArrayValues string) (map[string]float64, map[string][]float64, error) {
 	typeValue := make(map[string]float64)
 	typeValues := make(map[string][]float64)
