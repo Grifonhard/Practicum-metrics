@@ -42,6 +42,9 @@ func openFileRetry(name string, flag int, perm fs.FileMode) (file *os.File, err 
 func (f *File) writeToFileRetry(data *Data) error {
 	var errCollect []error
 	var err error
+	if f.file == nil {
+		return ErrFileNil
+	}
 	for i := 0; i < MAXRETRIES; i++ {
 		err = f.file.Truncate(0)
 		if err != nil{
@@ -79,6 +82,9 @@ func (f *File) writeToFileRetry(data *Data) error {
 func (f *File) readFromFileRetry(data *Data) (err error) {
 	var errCollect []error
 	var fileInfo fs.FileInfo
+	if f.file == nil {
+		return ErrFileNil
+	}
 	for i := 0; i < MAXRETRIES + 1; i++ {
 		fileInfo, err = f.file.Stat()
 		if err != nil {
@@ -96,6 +102,17 @@ func (f *File) readFromFileRetry(data *Data) (err error) {
 		if fileInfo.Size() == 0 {
 			return nil
 		}
+
+		_, err = f.file.Seek(0, 0)
+        if err != nil {
+            err = fmt.Errorf("не удалось переместить курсор в начало файла: %w", err)
+            errCollect = append(errCollect, err)
+            if i == MAXRETRIES {
+                break
+            }
+            time.Sleep(time.Second + RETRYINTERVALINCREASE*time.Duration(i))
+            continue
+        }
 
 		decoder := gob.NewDecoder(f.file)
 
