@@ -81,6 +81,6 @@ func ExampleMetGen_CollectCounterToChan() {
 	}
 
 	// Output:
-	// Counter Metric: PollCount = 10.000000
 	// Counter Metric: RequestCount = 5.000000
+	// Counter Metric: PollCount = 10.000000
 }
