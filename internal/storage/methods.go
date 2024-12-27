@@ -13,6 +13,7 @@ import (
 	"github.com/Grifonhard/Practicum-metrics/internal/storage/fileio"
 )
 
+// New создаёт экземпляр хранилища с/без бэкапирования в файл и с хранением в оперативной памяти или в базе данных postgres
 func New(intervalBackup int, filepathBackup string, restoreFromBackup bool, db psql.StorDB) (*MemStorage, error) {
 	var storage MemStorage
 
@@ -50,6 +51,7 @@ func New(intervalBackup int, filepathBackup string, restoreFromBackup bool, db p
 	return &storage, nil
 }
 
+// Push отправляет метрики на хранение
 func (ms *MemStorage) Push(metric *Metric) error {
 	switch ms.DB {
 	case nil:
@@ -91,6 +93,7 @@ func (ms *MemStorage) Push(metric *Metric) error {
 	return nil
 }
 
+// Get получение значения конкретной метрики
 func (ms *MemStorage) Get(metric *Metric) (float64, error) {
 	switch ms.DB {
 	case nil:
@@ -142,6 +145,7 @@ func (ms *MemStorage) Get(metric *Metric) (float64, error) {
 	}
 }
 
+// List предоставляет весь список хранимых метрик в формате ряда отформатированных записей
 func (ms *MemStorage) List() ([]string, error) {
 	var mapGauge map[string]float64
 	var mapCounter map[string][]float64
@@ -170,6 +174,7 @@ func (ms *MemStorage) List() ([]string, error) {
 	return list, nil
 }
 
+// BackupLoop сохраняет периодически метрики в бэкап
 func (ms *MemStorage) BackupLoop() {
 	defer func() {
 		ms.mu.Lock()
@@ -218,6 +223,8 @@ func (ms *MemStorage) BackupLoop() {
 	}
 }
 
+// listGauge получение отформатированного перечня метрик gauge
+// потокобезопасно
 func listGauge(gauge map[string]float64, list *[]string, wg *sync.WaitGroup, mu *sync.Mutex) {
 	defer wg.Done()
 	var i int
@@ -229,6 +236,8 @@ func listGauge(gauge map[string]float64, list *[]string, wg *sync.WaitGroup, mu 
 	}
 }
 
+// listCounter получение отформатированного перечня метрик counter
+// потокобезопасно
 func listCounter(lenGauge int, counter map[string][]float64, list *[]string, wg *sync.WaitGroup, mu *sync.Mutex) {
 	defer wg.Done()
 	i := lenGauge
@@ -245,6 +254,7 @@ func listCounter(lenGauge int, counter map[string][]float64, list *[]string, wg 
 	}
 }
 
+// ValidateAndConvert используется для валидации метрик поступающих в хранилище
 func ValidateAndConvert(method, mType, mName, mValue string) (*Metric, error) {
 	var result Metric
 	var err error

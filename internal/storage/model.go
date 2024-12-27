@@ -1,3 +1,4 @@
+// Модуль отвечает за управление храненением метрик
 package storage
 
 import (
@@ -9,17 +10,22 @@ import (
 	"github.com/Grifonhard/Practicum-metrics/internal/storage/fileio"
 )
 
+// Типы метрик
 const (
 	TYPEGAUGE      = "gauge"
 	TYPECOUNTER    = "counter"
-	BACKUPFILENAME = "backup"
 )
 
+// Название файла с бэкапом
+const BACKUPFILENAME = "backup"
+
+// Stor внешний интерфейс для хранилища метрик
 type Stor interface {
 	Push(name, value, typeMetric string) error
 	Pop(name string) ([]string, error)
 }
 
+// MemStorage структура, которая используется для хранения метрик в оперативной памяти и реализует интерфейс Stor 
 type MemStorage struct {
 	DB               psql.StorDB
 	ItemsGauge       map[string]float64
@@ -31,12 +37,15 @@ type MemStorage struct {
 	mu               sync.Mutex
 }
 
+// Metric единичная метрика
 type Metric struct {
 	Type  string  `json:"type"`
 	Name  string  `json:"id"`
 	Value float64 `json:"-"`
 }
 
+// MarshalJSON кастомная сериализация для Metric 
+// необходимо для того, чтобы передавать разные метрики в одном поле json
 func (m *Metric) MarshalJSON() ([]byte, error) {
 	type MAlias Metric
 	switch m.Type {
@@ -63,6 +72,8 @@ func (m *Metric) MarshalJSON() ([]byte, error) {
 	}
 }
 
+// UnmarshalJSON кастомная десериализация для Metric 
+// необходимо для того, чтобы передавать разные метрики в одном поле json
 func (m *Metric) UnmarshalJSON(data []byte) error {
 	type MAlias Metric
 	apiMetric := struct {

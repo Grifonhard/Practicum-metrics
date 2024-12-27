@@ -1,3 +1,4 @@
+// Модуль используется для передачи данных из агента на сервер хранения метрик 
 package webclient
 
 import (
@@ -19,6 +20,7 @@ import (
 	"github.com/Grifonhard/Practicum-metrics/internal/storage"
 )
 
+// Metrics для сериализации данных из генератора метрик
 type Metrics struct {
 	ID    string   `json:"id"`              // имя метрики
 	MType string   `json:"type"`            // параметр, принимающий значение gauge или counter
@@ -26,17 +28,19 @@ type Metrics struct {
 	Value *float64 `json:"value,omitempty"` // значение метрики в случае передачи gauge
 }
 
+// Настройки режима отправки данных
 const (
 	SENDSUBSEQUENCE = "subsequence mode" // для /update
 	SENDARRAY       = "array mode"       // для /updates
 )
 
-// если неудачно
+// Настройки повторных попыток отправить данные, если происходят сбои
 const (
 	MAXRETRIES            = 3               // Максимальное количество попыток
 	RETRYINTERVALINCREASE = 2 * time.Second // на столько растёт интервал между попытками, начиная с 1 секунды
 )
 
+// SendMetric агрегирует и отправляет данные на сервер
 func SendMetric(url string, gen *metgen.MetGen, keyHash, sendMethod string) {
 	ctx, cancel := context.WithCancel(context.Background())
 	ch := make(chan *Metrics)
@@ -124,6 +128,8 @@ func SendMetric(url string, gen *metgen.MetGen, keyHash, sendMethod string) {
 	}
 }
 
+// prepareDataToSend подготовка и отправка данных
+// приспособлена для асинхронной работы с функциями отправляющими данные
 func prepareDataToSend(g map[string]float64, c map[string]int64, ch chan *Metrics, cancel context.CancelFunc) {
 	wg := &sync.WaitGroup{}
 	wg.Add(2)
@@ -154,6 +160,7 @@ func prepareDataToSend(g map[string]float64, c map[string]int64, ch chan *Metric
 	cancel()
 }
 
+// compressBeforeSend сжатие данных перед отправкой
 func compressBeforeSend(b []byte) (compressed *bytes.Buffer, err error) {
 	compressed = new(bytes.Buffer)
 	writer := gzip.NewWriter(compressed)
@@ -171,12 +178,14 @@ func compressBeforeSend(b []byte) (compressed *bytes.Buffer, err error) {
 	return compressed, nil
 }
 
+// computeHMAC подготовка hmac для отправляемых данных
 func computeHMAC(value, key string) string {
 	h := hmac.New(sha256.New, []byte(key))
 	h.Write([]byte(value))
 	return hex.EncodeToString(h.Sum(nil))
 }
 
+// SendMetricWithWorkerPool асинхронная подготовка и отправка метрик
 func SendMetricWithWorkerPool(url string, gen *metgen.MetGen, keyHash string, rateLimit int) {
 	collectG := make(chan metgen.OneMetric)
 	collectC := make(chan metgen.OneMetric)
@@ -228,6 +237,8 @@ func SendMetricWithWorkerPool(url string, gen *metgen.MetGen, keyHash string, ra
 	logger.Info("sending with workers is over")
 }
 
+// sendWorker отправка данных на сервер
+// предназначена для работы как отдельная горутина
 func sendWorker(ctx context.Context, wg *sync.WaitGroup, url, keyHash string, input chan Metrics, errChan chan error) {
 	defer wg.Done()
 	//какого-то хрена заголовок Accept-Encoding gzip устанавливается автоматически в клиенте по умолчанию
@@ -290,6 +301,7 @@ func sendWorker(ctx context.Context, wg *sync.WaitGroup, url, keyHash string, in
 	}
 }
 
+// fanIn посредник между продюсерами метрик и воркерами для отправки метрик
 func fanIn(ctx context.Context, inputG, inputC chan metgen.OneMetric, output chan Metrics) {
 	defer close(output)
 	var closed [2]int

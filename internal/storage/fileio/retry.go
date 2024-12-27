@@ -12,12 +12,15 @@ import (
 	"github.com/Grifonhard/Practicum-metrics/internal/logger"
 )
 
-// если неудачно
+// Настройки повторных действий в случае неудачных попыток чтения/записи
 const (
 	MAXRETRIES            = 3               // Максимальное количество попыток
 	RETRYINTERVALINCREASE = 2 * time.Second // на столько растёт интервал между попытками, начиная с 1 секунды
 )
 
+// openFileRetry открывает файл для чтения/записи
+// используется в New
+// повторяет если не удалось
 func openFileRetry(name string, flag int, perm fs.FileMode) (file *os.File, err error) {
 	var errCollect []error
 	for i := 0; i < MAXRETRIES; i++ {
@@ -39,6 +42,9 @@ func openFileRetry(name string, flag int, perm fs.FileMode) (file *os.File, err 
 	return file, err
 }
 
+// writeToFileRetry запись в файл
+// используется в Write
+// повторяет если не удалось
 func (f *File) writeToFileRetry(data *Data) error {
 	var errCollect []error
 	var err error
@@ -79,6 +85,9 @@ func (f *File) writeToFileRetry(data *Data) error {
 	return err
 }
 
+// readFromFileRetry чтение из файла
+// используется в Read
+// повторение если не удалось
 func (f *File) readFromFileRetry(data *Data) (err error) {
 	var errCollect []error
 	var fileInfo fs.FileInfo

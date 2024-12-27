@@ -1,3 +1,4 @@
+// Глобальный логгер
 package logger
 
 import (

@@ -1,3 +1,4 @@
+// модуль предназначен для приёма данных из агентов и отправки данных о метриках в ответ на запросы
 package webserver
 
 import (
@@ -23,6 +24,8 @@ const (
 	METRICTYPEDEFAULT = "default"
 )
 
+// Update обновление данных о хранимых метриках
+// приспособлено для принятия одиночных метрик
 func Update(stor *storage.MemStorage) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		mType, ok := c.Get(METRICTYPE)
@@ -97,6 +100,8 @@ func Update(stor *storage.MemStorage) gin.HandlerFunc {
 	}
 }
 
+// Updates  обновление данных о хранимых метриках
+// приспособлено для принятия агрегированных данных о метриках
 func Updates(stor *storage.MemStorage) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		var buf bytes.Buffer
@@ -132,6 +137,8 @@ func Updates(stor *storage.MemStorage) gin.HandlerFunc {
 	}
 }
 
+// GetJSON предоставление информации о метрике
+// отправляет в формате JSON
 func GetJSON(stor *storage.MemStorage) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		c.Header("Content-Type", "application/json; charset=utf-8")
@@ -165,6 +172,8 @@ func GetJSON(stor *storage.MemStorage) gin.HandlerFunc {
 	}
 }
 
+// Get предоставление информации о метрике
+// отправляет значение
 func Get(stor *storage.MemStorage) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		mType, ok := c.Get(METRICTYPE)
@@ -207,6 +216,7 @@ func Get(stor *storage.MemStorage) gin.HandlerFunc {
 	}
 }
 
+// List предоставляет перечень всех хранимых метрик
 func List(stor *storage.MemStorage) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		list, err := stor.List()
@@ -222,6 +232,7 @@ func List(stor *storage.MemStorage) gin.HandlerFunc {
 	}
 }
 
+// PingDB позволяет проверить подключение к базе данных
 func PingDB(db *psql.DB) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		err := db.Ping()
@@ -233,6 +244,7 @@ func PingDB(db *psql.DB) gin.HandlerFunc {
 	}
 }
 
+// respondWithError записывает в логгер информацию о произведённой ошибке и отправляет ошибку клиенту
 func respondWithError(c *gin.Context, status int, logMessage string, userMessage string, err error) {
 	logger.Error(fmt.Sprintf("%s: %s", logMessage, err.Error()))
 	c.JSON(status, gin.H{"error": userMessage})
