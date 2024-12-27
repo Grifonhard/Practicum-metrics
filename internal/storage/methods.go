@@ -13,7 +13,7 @@ import (
 	"github.com/Grifonhard/Practicum-metrics/internal/storage/fileio"
 )
 
-func New(intervalBackup int, filepathBackup string, restoreFromBackup bool, db *psql.DB) (*MemStorage, error) {
+func New(intervalBackup int, filepathBackup string, restoreFromBackup bool, db psql.StorDB) (*MemStorage, error) {
 	var storage MemStorage
 
 	if intervalBackup != 0 {

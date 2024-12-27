@@ -23,7 +23,7 @@ func New(path, filename string) (*File, error) {
 
 	fullpath := filepath.Join(path, filename)
 	if path != "" {
-		err := os.Mkdir(path, 0755)
+		err := os.MkdirAll(path, 0755)
 		if err != nil && !os.IsExist(err){
 			return nil, err
 		}

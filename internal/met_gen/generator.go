@@ -36,6 +36,10 @@ func New() *MetGen {
 	return &mg
 }
 
+// для тестов
+var getGopsutilMetricsFunc = getGopsutilMetrics
+var getStandartMetricsFunc = getStandartMetrics
+
 func (mg *MetGen) Renew() error {
 	mg.mu.Lock()
 	defer mg.mu.Unlock()
@@ -45,8 +49,8 @@ func (mg *MetGen) Renew() error {
 	ctx, cancel := context.WithCancel(context.Background())
 	var closed [2]int
 
-	go getGopsutilMetrics(ctx, input1, errChan)
-	go getStandartMetrics(ctx, input2, errChan)
+	go getGopsutilMetricsFunc(ctx, input1, errChan)
+    go getStandartMetricsFunc(ctx, input2, errChan)
 
 	loop:
 		for {
