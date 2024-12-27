@@ -47,7 +47,7 @@ func TestRenewSuccess(t *testing.T) {
 	// Проверяем, что метрики обновлены.
 	gg, cntr, err := mg.Collect()
 	require.NoError(t, err)
-	assert.GreaterOrEqual(t, len(gg), 1)    // Должны быть собраны хотя бы несколько метрик.
+	assert.GreaterOrEqual(t, len(gg), 1)   // Должны быть собраны хотя бы несколько метрик.
 	assert.GreaterOrEqual(t, len(cntr), 1) // Должны быть собраны хотя бы несколько метрик.
 	assert.Equal(t, int64(1), cntr["PollCount"])
 }
@@ -250,29 +250,29 @@ func TestRenewConcurrency(t *testing.T) {
 
 func TestRenewContextCancellation(t *testing.T) {
 	// Инициализируем моковый логгер.
-    assert.NoError(t, logger.Init(&MockLogger{}, 5))
+	assert.NoError(t, logger.Init(&MockLogger{}, 5))
 
-    // Сохраняем оригинальную функцию и восстанавливаем её после теста.
-    originalGetGopsutilMetricsFunc := getGopsutilMetricsFunc
-    defer func() { getGopsutilMetricsFunc = originalGetGopsutilMetricsFunc }()
+	// Сохраняем оригинальную функцию и восстанавливаем её после теста.
+	originalGetGopsutilMetricsFunc := getGopsutilMetricsFunc
+	defer func() { getGopsutilMetricsFunc = originalGetGopsutilMetricsFunc }()
 
-    // Переопределяем функцию, чтобы она возвращала ошибку и закрывала канал output.
-    getGopsutilMetricsFunc = func(ctx context.Context, output chan OneMetric, errChan chan error) {
-        errChan <- errors.New("mocked error in getGopsutilMetrics")
-        close(output)
+	// Переопределяем функцию, чтобы она возвращала ошибку и закрывала канал output.
+	getGopsutilMetricsFunc = func(ctx context.Context, output chan OneMetric, errChan chan error) {
+		errChan <- errors.New("mocked error in getGopsutilMetrics")
+		close(output)
 		close(errChan)
-    }
+	}
 
-    mg := New()
-    require.NotNil(t, mg)
+	mg := New()
+	require.NotNil(t, mg)
 
-    // Выполняем Renew и ожидаем ошибки.
-    err := mg.Renew()
-    require.Error(t, err)
-    assert.Contains(t, err.Error(), "mocked error in getGopsutilMetrics")
+	// Выполняем Renew и ожидаем ошибки.
+	err := mg.Renew()
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "mocked error in getGopsutilMetrics")
 
-    // Проверяем, что PollCount не увеличился.
-    _, cntr, err := mg.Collect()
-    require.NoError(t, err)
-    assert.Equal(t, int64(0), cntr["PollCount"])
+	// Проверяем, что PollCount не увеличился.
+	_, cntr, err := mg.Collect()
+	require.NoError(t, err)
+	assert.Equal(t, int64(0), cntr["PollCount"])
 }

@@ -6,11 +6,11 @@ import (
 	"context"
 	"encoding/json"
 	"io"
+	"log"
 	"net/http"
 	"net/http/httptest"
-	"testing"
 	"os"
-	"log"
+	"testing"
 
 	"github.com/Grifonhard/Practicum-metrics/internal/logger"
 	metgen "github.com/Grifonhard/Practicum-metrics/internal/met_gen"

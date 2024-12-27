@@ -97,7 +97,7 @@ func TestGetJSON(t *testing.T) {
 		"testgauge": 3.33,
 	}
 
-	err = logger.Init(os.Stdout,4)
+	err = logger.Init(os.Stdout, 4)
 	if err != nil {
 		log.Fatal(err)
 	}

@@ -25,7 +25,7 @@ func openFileRetry(name string, flag int, perm fs.FileMode) (file *os.File, err 
 		if os.IsNotExist(err) {
 			file, err = os.OpenFile(name, os.O_RDWR|os.O_CREATE, perm)
 		}
-		if err != nil{
+		if err != nil {
 			time.Sleep(time.Second + RETRYINTERVALINCREASE*time.Duration(i))
 			errCollect = append(errCollect, err)
 			continue
@@ -47,15 +47,15 @@ func (f *File) writeToFileRetry(data *Data) error {
 	}
 	for i := 0; i < MAXRETRIES; i++ {
 		err = f.file.Truncate(0)
-		if err != nil{
+		if err != nil {
 			err = fmt.Errorf("fail truncate file: %w", err)
 			time.Sleep(time.Second + RETRYINTERVALINCREASE*time.Duration(i))
 			errCollect = append(errCollect, err)
 			continue
 		}
-		
+
 		_, err = f.file.Seek(0, 0)
-		if err != nil{
+		if err != nil {
 			err = fmt.Errorf("failed to move pointer to beginning of file: %w", err)
 			time.Sleep(time.Second + RETRYINTERVALINCREASE*time.Duration(i))
 			errCollect = append(errCollect, err)
@@ -85,7 +85,7 @@ func (f *File) readFromFileRetry(data *Data) (err error) {
 	if f.file == nil {
 		return ErrFileNil
 	}
-	for i := 0; i < MAXRETRIES + 1; i++ {
+	for i := 0; i < MAXRETRIES+1; i++ {
 		fileInfo, err = f.file.Stat()
 		if err != nil {
 			if i == MAXRETRIES {
@@ -104,15 +104,15 @@ func (f *File) readFromFileRetry(data *Data) (err error) {
 		}
 
 		_, err = f.file.Seek(0, 0)
-        if err != nil {
-            err = fmt.Errorf("не удалось переместить курсор в начало файла: %w", err)
-            errCollect = append(errCollect, err)
-            if i == MAXRETRIES {
-                break
-            }
-            time.Sleep(time.Second + RETRYINTERVALINCREASE*time.Duration(i))
-            continue
-        }
+		if err != nil {
+			err = fmt.Errorf("не удалось переместить курсор в начало файла: %w", err)
+			errCollect = append(errCollect, err)
+			if i == MAXRETRIES {
+				break
+			}
+			time.Sleep(time.Second + RETRYINTERVALINCREASE*time.Duration(i))
+			continue
+		}
 
 		decoder := gob.NewDecoder(f.file)
 

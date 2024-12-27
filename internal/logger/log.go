@@ -9,7 +9,7 @@ import (
 
 var logger *logrus.Logger
 
-//level from 0 to 5
+// level from 0 to 5
 func Init(output io.Writer, level int) error {
 	log := logrus.New()
 

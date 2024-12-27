@@ -21,11 +21,11 @@ type MetricsGenerator interface {
 type MetGen struct {
 	MetricsGauge   map[string]float64 //метрики float64
 	MetricsCounter map[string]int64   //метрики int64
-	mu sync.RWMutex
+	mu             sync.RWMutex
 }
 
 type OneMetric struct {
-	Name string
+	Name   string
 	Metric float64
 }
 
@@ -50,43 +50,43 @@ func (mg *MetGen) Renew() error {
 	var closed [2]int
 
 	go getGopsutilMetricsFunc(ctx, input1, errChan)
-    go getStandartMetricsFunc(ctx, input2, errChan)
+	go getStandartMetricsFunc(ctx, input2, errChan)
 
-	loop:
-		for {
-			select {
-			case one, ok := <- input1:
-				if !ok {
-					closed[0] = 1
-				}
-				if closed[0] == 1 && closed[1] == 1 {
-					break loop
-				}
-				mg.MetricsGauge[one.Name] = one.Metric
-			case one, ok := <- input2:
-				if !ok {
-					closed[1] = 1
-				}
-				if closed[0] == 1 && closed[1] == 1 {
-					break loop
-				}
-				mg.MetricsGauge[one.Name] = one.Metric
-			case err := <- errChan:
-				cancel()
-				// очищаем каналы чтобы функции передающие данные в момент cancel прервали работу
-				// static test не даёт использовать _
-				for drop := range input1 {
-					logger.Info(fmt.Sprintf("%v dropped", drop))
-				}
-				for drop := range input2 {
-					logger.Info(fmt.Sprintf("%v dropped", drop))
-				}
-				for drop := range errChan {
-					logger.Info(fmt.Sprintf("%v dropped", drop))
-				}
-				return err
+loop:
+	for {
+		select {
+		case one, ok := <-input1:
+			if !ok {
+				closed[0] = 1
 			}
+			if closed[0] == 1 && closed[1] == 1 {
+				break loop
+			}
+			mg.MetricsGauge[one.Name] = one.Metric
+		case one, ok := <-input2:
+			if !ok {
+				closed[1] = 1
+			}
+			if closed[0] == 1 && closed[1] == 1 {
+				break loop
+			}
+			mg.MetricsGauge[one.Name] = one.Metric
+		case err := <-errChan:
+			cancel()
+			// очищаем каналы чтобы функции передающие данные в момент cancel прервали работу
+			// static test не даёт использовать _
+			for drop := range input1 {
+				logger.Info(fmt.Sprintf("%v dropped", drop))
+			}
+			for drop := range input2 {
+				logger.Info(fmt.Sprintf("%v dropped", drop))
+			}
+			for drop := range errChan {
+				logger.Info(fmt.Sprintf("%v dropped", drop))
+			}
+			return err
 		}
+	}
 	mg.MetricsCounter["PollCount"]++
 
 	cancel()
@@ -114,11 +114,11 @@ func (mg *MetGen) CollectGaugeToChan(ctx context.Context, output chan OneMetric,
 	for k, v := range mg.MetricsGauge {
 		mg.mu.RUnlock()
 		select {
-		case <- ctx.Done():
+		case <-ctx.Done():
 			return
 		default:
 			output <- OneMetric{
-				Name: k,
+				Name:   k,
 				Metric: v,
 			}
 		}
@@ -133,11 +133,11 @@ func (mg *MetGen) CollectCounterToChan(ctx context.Context, output chan OneMetri
 	for k, v := range mg.MetricsCounter {
 		mg.mu.RUnlock()
 		select {
-		case <- ctx.Done():
+		case <-ctx.Done():
 			return
 		default:
 			output <- OneMetric{
-				Name: k,
+				Name:   k,
 				Metric: float64(v),
 			}
 		}
@@ -183,11 +183,11 @@ func getStandartMetrics(ctx context.Context, output chan OneMetric, errChan chan
 
 	for n, m := range gauge {
 		select {
-		case <- ctx.Done():
+		case <-ctx.Done():
 			return
 		default:
 			output <- OneMetric{
-				Name: n,
+				Name:   n,
 				Metric: m,
 			}
 		}
@@ -210,24 +210,24 @@ func getGopsutilMetrics(ctx context.Context, output chan OneMetric, errChan chan
 	}
 
 	cpuUtilization, err := cpu.Percent(1*time.Second, false)
-    if err != nil {
-        logger.Error(fmt.Sprintf("Ошибка при получении загрузки CPU: %v", err))
+	if err != nil {
+		logger.Error(fmt.Sprintf("Ошибка при получении загрузки CPU: %v", err))
 		errChan <- err
 		return
-    }
+	}
 	if len(cpuUtilization) != 0 {
 		gauge["CpuUtilization"] = cpuUtilization[0]
 	}
 
 	for n, m := range gauge {
 		select {
-		case <- ctx.Done():
+		case <-ctx.Done():
 			return
 		default:
 			output <- OneMetric{
-				Name: n,
+				Name:   n,
 				Metric: m,
 			}
-		}	
+		}
 	}
 }
