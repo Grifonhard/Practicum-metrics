@@ -21,7 +21,7 @@ type Stor interface {
 }
 
 type MemStorage struct {
-	DB *psql.DB
+	DB psql.StorDB
 	ItemsGauge   map[string]float64
 	ItemsCounter map[string][]float64
 	backupChan   chan struct{}
