@@ -22,7 +22,6 @@ import (
 type MockLogger struct{}
 
 func (m *MockLogger) Write(p []byte) (n int, err error) {
-	fmt.Println(string(p))
 	return len(p), nil
 }
 
@@ -692,4 +691,175 @@ func TestUnmarshal(t *testing.T) {
 	err := json.Unmarshal([]byte(`{"id":"PollCount","type":"counter","delta":3}`), &item)
 	assert.NoError(t, err)
 	assert.Equal(t, `counter PollCount 3`, fmt.Sprintf("%s %s %0.f", item.Type, item.Name, item.Value))
+}
+
+func BenchmarkGetMemoryGauge(b *testing.B) {
+	// Инициализируем моковый логгер.
+	assert.NoError(b, logger.Init(&MockLogger{}, 5))
+
+	tmpDir := b.TempDir()
+	storage, err := New(0, tmpDir, false, nil)
+	require.NoError(b, err)
+	defer storage.backupFile.Close()
+
+	// Добавляем метрику заранее.
+	storage.mu.Lock()
+	storage.ItemsGauge["benchmark_gauge"] = 1.23
+	storage.mu.Unlock()
+
+	metric := &Metric{
+		Type: TYPEGAUGE,
+		Name: "benchmark_gauge",
+	}
+
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		value, err := storage.Get(metric)
+		require.NoError(b, err)
+		assert.Equal(b, 1.23, value)
+	}
+}
+
+func BenchmarkGetDatabaseGauge(b *testing.B) {
+	// Инициализируем моковый логгер.
+	assert.NoError(b, logger.Init(&MockLogger{}, 5))
+
+	tmpDir := b.TempDir()
+	mockDB := NewMockDB()
+	mockDB.metricsGauge["benchmark_db_gauge"] = 1.23
+	storage, err := New(0, tmpDir, false, mockDB)
+	require.NoError(b, err)
+	defer storage.backupFile.Close()
+
+	metric := &Metric{
+		Type: TYPEGAUGE,
+		Name: "benchmark_db_gauge",
+	}
+
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		value, err := storage.Get(metric)
+		require.NoError(b, err)
+		assert.Equal(b, 1.23, value)
+	}
+}
+
+func BenchmarkListMemory(b *testing.B) {
+	// Инициализируем моковый логгер.
+	assert.NoError(b, logger.Init(&MockLogger{}, 5))
+
+	tmpDir := b.TempDir()
+	storage, err := New(0, tmpDir, false, nil)
+	require.NoError(b, err)
+	defer storage.backupFile.Close()
+
+	// Добавляем множество метрик заранее.
+	storage.mu.Lock()
+	for i := 0; i < 1000; i++ {
+		storage.ItemsGauge[fmt.Sprintf("gauge_%d", i)] = float64(i)
+		storage.ItemsCounter[fmt.Sprintf("counter_%d", i)] = []float64{float64(i), float64(i * 2)}
+	}
+	storage.mu.Unlock()
+
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		list, err := storage.List()
+		require.NoError(b, err)
+		assert.Len(b, list, 2000)
+	}
+}
+
+func BenchmarkListDatabase(b *testing.B) {
+	// Инициализируем моковый логгер.
+	assert.NoError(b, logger.Init(&MockLogger{}, 5))
+
+	tmpDir := b.TempDir()
+	mockDB := NewMockDB()
+
+	// Добавляем множество метрик в моковую DB.
+	for i := 0; i < 1000; i++ {
+		mockDB.metricsGauge[fmt.Sprintf("gauge_db_%d", i)] = float64(i)
+		mockDB.metricsCounter[fmt.Sprintf("counter_db_%d", i)] = []float64{float64(i), float64(i * 2)}
+	}
+
+	storage, err := New(0, tmpDir, false, mockDB)
+	require.NoError(b, err)
+	defer storage.backupFile.Close()
+
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		list, err := storage.List()
+		require.NoError(b, err)
+		assert.Len(b, list, 2000)
+	}
+}
+
+func BenchmarkBackupLoopMemory(b *testing.B) {
+	// Инициализируем моковый логгер.
+	assert.NoError(b, logger.Init(&MockLogger{}, 5))
+
+	tmpDir := b.TempDir()
+	storage, err := New(0, tmpDir, false, nil)
+	require.NoError(b, err)
+	defer storage.backupFile.Close()
+
+	// Добавляем метрики заранее.
+	storage.mu.Lock()
+	for i := 0; i < 1000; i++ {
+		storage.ItemsGauge[fmt.Sprintf("gauge_%d", i)] = float64(i)
+		storage.ItemsCounter[fmt.Sprintf("counter_%d", i)] = []float64{float64(i), float64(i * 2)}
+	}
+	storage.mu.Unlock()
+
+	// Запускаем BackupLoop в отдельной горутине.
+	go storage.BackupLoop()
+
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		// Отправляем сигнал для бэкапа.
+		select {
+		case storage.backupChan <- struct{}{}:
+		default:
+			// Если канал забит, пропускаем отправку.
+		}
+	}
+
+	// Останавливаем BackupLoop через закрытие канала.
+	storage.backupChan <- struct{}{}
+	storage.backupFile.Close()
+}
+
+func BenchmarkBackupLoopDatabase(b *testing.B) {
+	// Инициализируем моковый логгер.
+	assert.NoError(b, logger.Init(&MockLogger{}, 5))
+
+	tmpDir := b.TempDir()
+	mockDB := NewMockDB()
+
+	// Добавляем метрики в моковую DB.
+	for i := 0; i < 1000; i++ {
+		mockDB.metricsGauge[fmt.Sprintf("gauge_db_%d", i)] = float64(i)
+		mockDB.metricsCounter[fmt.Sprintf("counter_db_%d", i)] = []float64{float64(i), float64(i * 2)}
+	}
+
+	storage, err := New(0, tmpDir, false, mockDB)
+	require.NoError(b, err)
+	defer storage.backupFile.Close()
+
+	// Запускаем BackupLoop в отдельной горутине.
+	go storage.BackupLoop()
+
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		// Отправляем сигнал для бэкапа.
+		select {
+		case storage.backupChan <- struct{}{}:
+		default:
+			// Если канал забит, пропускаем отправку.
+		}
+	}
+
+	// Останавливаем BackupLoop через закрытие канала.
+	storage.backupChan <- struct{}{}
+	storage.backupFile.Close()
 }
