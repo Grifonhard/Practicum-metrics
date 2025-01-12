@@ -19,7 +19,7 @@ func TestInfo(t *testing.T) {
 	var buf bytes.Buffer
 
 	// Инициализация логгера с выводом в буфер
-	Init(&buf,4)
+	Init(&buf, 4)
 
 	// Вызываем функцию Info
 	logger.Info("Test info message")
@@ -34,7 +34,7 @@ func TestError(t *testing.T) {
 	var buf bytes.Buffer
 
 	// Инициализация логгера с выводом в буфер
-	Init(&buf,2)
+	Init(&buf, 2)
 
 	// Вызываем функцию Error
 	logger.Error("Test error message")
@@ -48,7 +48,7 @@ func TestWarn(t *testing.T) {
 	var buf bytes.Buffer
 
 	// Инициализация логгера с выводом в буфер
-	Init(&buf,3)
+	Init(&buf, 3)
 
 	// Вызываем функцию Warn
 	logger.Warn("Test warning message")
@@ -62,7 +62,7 @@ func TestDebug(t *testing.T) {
 	var buf bytes.Buffer
 
 	// Инициализация логгера с выводом в буфер
-	Init(&buf,5)
+	Init(&buf, 5)
 
 	// Устанавливаем уровень Debug
 	logger.Debug("Test debug message")
@@ -76,7 +76,7 @@ func TestWithFields(t *testing.T) {
 	var buf bytes.Buffer
 
 	// Инициализация логгера с выводом в буфер
-	Init(&buf,4)
+	Init(&buf, 4)
 
 	// Используем WithFields для добавления полей
 	logger.WithFields(logrus.Fields{

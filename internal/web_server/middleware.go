@@ -1,6 +1,7 @@
 package webserver
 
 import (
+	"bytes"
 	"compress/gzip"
 	"crypto/hmac"
 	"crypto/sha256"
@@ -10,25 +11,28 @@ import (
 	"net/http"
 	"strings"
 	"time"
-	"bytes"
 
 	"github.com/Grifonhard/Practicum-metrics/internal/logger"
 	"github.com/gin-gonic/gin"
 	"github.com/sirupsen/logrus"
 )
 
+// respInfo хранит информацию для логирования обращений к серверу
 type respInfo struct {
 	status int
 	size   int
 	hash   string // на случай если потребуется работа с псевдоаутентификацией
 }
 
+// loggingResponseWriter используется для логирования обращений к серверу
+// обёртка для ResponseWriter
 type loggingResponseWriter struct {
 	gin.ResponseWriter
 	respInfo *respInfo
-	key string			// на случай если потребуется работа с псевдоаутентификацией
+	key      string // на случай если потребуется работа с псевдоаутентификацией
 }
 
+// Write записывает данные в ResponseWriter, считает хэш
 func (lw *loggingResponseWriter) Write(data []byte) (int, error) {
 	if lw.key != "" {
 		lw.respInfo.hash = computeHMAC(data, lw.key)
@@ -38,12 +42,14 @@ func (lw *loggingResponseWriter) Write(data []byte) (int, error) {
 	return size, err
 }
 
+// WriteHeader записывает заголовки в ResponseWrite, отправляет хэш в заголовке
 func (lw *loggingResponseWriter) WriteHeader(statusCode int) {
 	lw.ResponseWriter.Header().Set("HashSHA256", lw.respInfo.hash)
 	lw.respInfo.status = statusCode
 	lw.ResponseWriter.WriteHeader(statusCode)
 }
 
+// ReqRespLogger логгирует реквесты и респонсы
 func ReqRespLogger(key string) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		start := time.Now()
@@ -53,7 +59,7 @@ func ReqRespLogger(key string) gin.HandlerFunc {
 		lw := &loggingResponseWriter{
 			ResponseWriter: c.Writer,
 			respInfo:       respInfo,
-			key:			key,
+			key:            key,
 		}
 
 		c.Writer = lw
@@ -71,11 +77,13 @@ func ReqRespLogger(key string) gin.HandlerFunc {
 	}
 }
 
+// decompressBody структура для расшифровки сжатых данных "на ходу"
 type decompressBody struct {
 	io.ReadCloser
 	gzipReader *gzip.Reader
 }
 
+// NewDecompressBody инициализация decompressBody
 func NewDecompressBody(req *http.Request) (*decompressBody, error) {
 	gzipReader, err := gzip.NewReader(req.Body)
 	if err != nil {
@@ -87,10 +95,12 @@ func NewDecompressBody(req *http.Request) (*decompressBody, error) {
 	}, nil
 }
 
+// Read чтение сжатых данных
 func (d *decompressBody) Read(p []byte) (n int, err error) {
 	return d.gzipReader.Read(p)
 }
 
+// Close закрытие всех сущностей decompressBody
 func (d *decompressBody) Close() error {
 	if err := d.gzipReader.Close(); err != nil {
 		return err
@@ -98,11 +108,14 @@ func (d *decompressBody) Close() error {
 	return d.ReadCloser.Close()
 }
 
+// compressResponseWriter структура для сжатия данных "на ходу"
+// обёртка для ResponseWriter
 type compressResponseWriter struct {
 	gin.ResponseWriter
 	gzipWriter *gzip.Writer
 }
 
+// NewCompressResponseWriter инициализация compressResponseWriter
 func NewCompressResponseWriter(w gin.ResponseWriter) (*compressResponseWriter, error) {
 	gzipWriter := gzip.NewWriter(w)
 	return &compressResponseWriter{
@@ -111,24 +124,30 @@ func NewCompressResponseWriter(w gin.ResponseWriter) (*compressResponseWriter, e
 	}, nil
 }
 
+// Write запись отправляемых данных
 func (c *compressResponseWriter) Write(p []byte) (int, error) {
 	return c.gzipWriter.Write(p)
 }
 
+// WriteHeader записывает заголовки в ResponseWrite
+// устанавливает по умолчанию заголовок gzip
 func (c *compressResponseWriter) WriteHeader(code int) {
 	c.Header().Set("Content-Encoding", "gzip")
 	c.ResponseWriter.WriteHeader(code)
 }
 
+// Flush делает flush и для gzipWriter и для ResponseWriter
 func (c *compressResponseWriter) Flush() {
 	c.gzipWriter.Flush()
 	c.ResponseWriter.Flush()
 }
 
+// Close закрывает gzipWriter
 func (c *compressResponseWriter) Close() error {
 	return c.gzipWriter.Close()
 }
 
+// DataExtraction анализирует пришедшие данные и перенаправляет к нужному обработчику
 func DataExtraction() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		hvCT := c.Request.Header.Values("Content-Encoding")
@@ -163,6 +182,7 @@ func DataExtraction() gin.HandlerFunc {
 	}
 }
 
+// RespEncode сжимает отправляемые данные
 func RespEncode() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		hvAE := c.Request.Header.Values("Accept-Encoding")
@@ -186,6 +206,7 @@ func RespEncode() gin.HandlerFunc {
 	}
 }
 
+// PseudoAuth аутентификация
 func PseudoAuth(key string) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		if key != "" {
@@ -199,24 +220,25 @@ func PseudoAuth(key string) gin.HandlerFunc {
 			c.Request.Body = io.NopCloser(bytes.NewBuffer(body))
 
 			receivedHash := c.GetHeader("HashSHA256")
-            if receivedHash == "" {
-                c.JSON(http.StatusBadRequest, gin.H{"error": "Missing HashSHA256 header"})
-                c.Abort()
-                return
-            }
+			if receivedHash == "" {
+				c.JSON(http.StatusBadRequest, gin.H{"error": "Missing HashSHA256 header"})
+				c.Abort()
+				return
+			}
 
 			expectedHash := computeHMAC(body, key)
-            if receivedHash != expectedHash {
-                c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid HMAC"})
-                c.Abort()
-                return
-            }
+			if receivedHash != expectedHash {
+				c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid HMAC"})
+				c.Abort()
+				return
+			}
 		}
-		
+
 		c.Next()
 	}
 }
 
+// computeHMAC высчитывает хэш данных
 func computeHMAC(value []byte, key string) string {
 	h := hmac.New(sha256.New, []byte(key))
 	h.Write(value)

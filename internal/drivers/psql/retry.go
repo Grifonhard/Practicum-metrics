@@ -2,19 +2,20 @@ package psql
 
 import (
 	"database/sql"
-	"time"
 	"errors"
+	"time"
 
 	"github.com/jackc/pgerrcode"
 	"github.com/jackc/pgx/v5/pgconn"
 )
 
-// если неудачно
+// Настройки повторных обращений в случае неудачных попыток
 const (
 	MAXRETRIES            = 3               // Максимальное количество попыток
 	RETRYINTERVALINCREASE = 2 * time.Second // на столько растёт интервал между попытками, начиная с 1 секунды
 )
 
+// openRetry повторение попыток открытия данных
 func openRetry(driverName string, dataSourceName string) (db *sql.DB, err error) {
 	for i := 0; i < MAXRETRIES; i++ {
 		db, err = sql.Open(driverName, dataSourceName)
@@ -28,9 +29,10 @@ func openRetry(driverName string, dataSourceName string) (db *sql.DB, err error)
 			break
 		}
 	}
-	return 
+	return
 }
 
+// execRetry повторение попыток отправить директивы в базу 
 func (db *DB) execRetry(query string, args ...any) (result sql.Result, err error) {
 	for i := 0; i < MAXRETRIES; i++ {
 		result, err = db.Exec(query, args...)
@@ -47,6 +49,7 @@ func (db *DB) execRetry(query string, args ...any) (result sql.Result, err error
 	return result, err
 }
 
+// rowScanRetry повторение попыток сканировать строку данных, пришедших из базы
 func (db *DB) rowScanRetry(row *sql.Row, dest ...any) (err error) {
 	for i := 0; i < MAXRETRIES; i++ {
 		err = row.Scan(dest...)
@@ -63,6 +66,7 @@ func (db *DB) rowScanRetry(row *sql.Row, dest ...any) (err error) {
 	return err
 }
 
+// queryRetry повторение попыток сделать запрос
 func (db *DB) queryRetry(query string, args ...any) (rows *sql.Rows, err error) {
 	for i := 0; i < MAXRETRIES; i++ {
 		rows, err = db.Query(query, args...)

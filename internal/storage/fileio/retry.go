@@ -1,22 +1,26 @@
 package fileio
 
 import (
+	"encoding/gob"
+	"errors"
 	"fmt"
+	"io"
 	"io/fs"
 	"os"
 	"time"
-	"errors"
-	"encoding/gob"
 
 	"github.com/Grifonhard/Practicum-metrics/internal/logger"
 )
 
-// если неудачно
+// Настройки повторных действий в случае неудачных попыток чтения/записи
 const (
 	MAXRETRIES            = 3               // Максимальное количество попыток
 	RETRYINTERVALINCREASE = 2 * time.Second // на столько растёт интервал между попытками, начиная с 1 секунды
 )
 
+// openFileRetry открывает файл для чтения/записи
+// используется в New
+// повторяет если не удалось
 func openFileRetry(name string, flag int, perm fs.FileMode) (file *os.File, err error) {
 	var errCollect []error
 	for i := 0; i < MAXRETRIES; i++ {
@@ -24,7 +28,7 @@ func openFileRetry(name string, flag int, perm fs.FileMode) (file *os.File, err 
 		if os.IsNotExist(err) {
 			file, err = os.OpenFile(name, os.O_RDWR|os.O_CREATE, perm)
 		}
-		if err != nil{
+		if err != nil {
 			time.Sleep(time.Second + RETRYINTERVALINCREASE*time.Duration(i))
 			errCollect = append(errCollect, err)
 			continue
@@ -38,20 +42,26 @@ func openFileRetry(name string, flag int, perm fs.FileMode) (file *os.File, err 
 	return file, err
 }
 
+// writeToFileRetry запись в файл
+// используется в Write
+// повторяет если не удалось
 func (f *File) writeToFileRetry(data *Data) error {
 	var errCollect []error
 	var err error
+	if f.file == nil {
+		return ErrFileNil
+	}
 	for i := 0; i < MAXRETRIES; i++ {
 		err = f.file.Truncate(0)
-		if err != nil{
+		if err != nil {
 			err = fmt.Errorf("fail truncate file: %w", err)
 			time.Sleep(time.Second + RETRYINTERVALINCREASE*time.Duration(i))
 			errCollect = append(errCollect, err)
 			continue
 		}
-		
+
 		_, err = f.file.Seek(0, 0)
-		if err != nil{
+		if err != nil {
 			err = fmt.Errorf("failed to move pointer to beginning of file: %w", err)
 			time.Sleep(time.Second + RETRYINTERVALINCREASE*time.Duration(i))
 			errCollect = append(errCollect, err)
@@ -75,10 +85,16 @@ func (f *File) writeToFileRetry(data *Data) error {
 	return err
 }
 
+// readFromFileRetry чтение из файла
+// используется в Read
+// повторение если не удалось
 func (f *File) readFromFileRetry(data *Data) (err error) {
 	var errCollect []error
 	var fileInfo fs.FileInfo
-	for i := 0; i < MAXRETRIES + 1; i++ {
+	if f.file == nil {
+		return ErrFileNil
+	}
+	for i := 0; i < MAXRETRIES+1; i++ {
 		fileInfo, err = f.file.Stat()
 		if err != nil {
 			if i == MAXRETRIES {
@@ -96,10 +112,21 @@ func (f *File) readFromFileRetry(data *Data) (err error) {
 			return nil
 		}
 
+		_, err = f.file.Seek(0, 0)
+		if err != nil {
+			err = fmt.Errorf("не удалось переместить курсор в начало файла: %w", err)
+			errCollect = append(errCollect, err)
+			if i == MAXRETRIES {
+				break
+			}
+			time.Sleep(time.Second + RETRYINTERVALINCREASE*time.Duration(i))
+			continue
+		}
+
 		decoder := gob.NewDecoder(f.file)
 
 		err = decoder.Decode(&data)
-		if err != nil {
+		if err != nil && !errors.Is(err, io.EOF) {
 			if i == MAXRETRIES {
 				logger.Error(fmt.Sprintf("problem with read file: %s\n", errors.Join(errCollect...).Error()))
 				logger.Error(fmt.Sprintf("Файл %s поврежден, удаляю...\n", f.fullpath))
@@ -127,5 +154,5 @@ func (f *File) readFromFileRetry(data *Data) (err error) {
 	if errCollect != nil {
 		logger.Error(fmt.Sprintf("problem with read file: %s\n", errors.Join(errCollect...).Error()))
 	}
-	return err
+	return nil
 }
