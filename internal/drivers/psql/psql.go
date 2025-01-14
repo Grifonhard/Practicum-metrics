@@ -27,16 +27,26 @@ type DB struct {
 func ConnectDB(dsn string) (*DB, error) {
 	db, err := openRetry("pgx", dsn)
 	if err == nil {
+		if pingErr := db.Ping(); pingErr != nil {
+			_ = db.Close()
+			return nil, pingErr
+		}
 		return &DB{
 			DB: db,
 		}, nil
-	} else {
-		return nil, err
 	}
+
+	return nil, err
 }
 
 // PingDB пинг базы данных
 func (db *DB) PingDB() error {
+	if db == nil {
+		return ErrNotInit
+	}
+	if db.DB == nil {
+		return ErrNotInit
+	}
 	return db.DB.Ping()
 }
 
@@ -47,6 +57,12 @@ func (db *DB) Close() error {
 
 // CreateMetricsTable создание таблицы для хранения метрик
 func (db *DB) CreateMetricsTable() error {
+	if db == nil {
+		return ErrNotInit
+	}
+	if db.DB == nil {
+		return ErrNotInit
+	}
 	query := fmt.Sprintf(`CREATE TABLE IF NOT EXISTS %s (
 							%s %s,
 							%s %s
