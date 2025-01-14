@@ -13,6 +13,10 @@ import (
 	"github.com/caarlos0/env/v10"
 )
 
+var buildVersion string
+var buildDate string
+var buildCommit string
+
 const (
 	DEFAULTADDR           = "localhost:8080"
 	DEFAULTREPORTINTERVAL = 10

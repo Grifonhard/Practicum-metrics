@@ -1,3 +1,5 @@
+//go:generate ./generate_version.sh
+
 package main
 
 import (
@@ -14,10 +16,15 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
+var buildVersion string
+var buildDate string
+var buildCommit string
+
 const (
 	DEFAULTADDR          = "localhost:8080"
 	DEFAULTSTOREINTERVAL = 300
 	DEFAULTRESTORE       = true
+	NA = "N/A"
 )
 
 type CFG struct {
@@ -64,7 +71,7 @@ func main() {
 		key = cfg.Key
 	}
 
-	fmt.Println(key)
+	showMeta()
 
 	err = logger.Init(os.Stdout, 4)
 	if err != nil {
@@ -108,4 +115,22 @@ func initRouter(stor *storage.MemStorage, db *psql.DB, key string) *gin.Engine {
 	}
 
 	return router
+}
+
+func showMeta() {
+	if buildVersion == "" {
+		fmt.Printf("Build version: %s\n", NA)
+	} else {
+		fmt.Printf("Build version: %s\n", buildVersion)
+	}
+	if buildCommit == "" {
+		fmt.Printf("Build commit: %s\n", NA)
+	} else {
+		fmt.Printf("Build commit: %s\n", buildCommit)
+	}
+	if buildDate == "" {
+		fmt.Printf("Build date: %s\n", NA)
+	} else {
+		fmt.Printf("Build date: %s\n", buildDate)
+	}
 }
