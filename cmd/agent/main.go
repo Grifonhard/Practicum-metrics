@@ -21,6 +21,7 @@ const (
 	DEFAULTADDR           = "localhost:8080"
 	DEFAULTREPORTINTERVAL = 10
 	DEFAULTPOLLINTERVAL   = 2
+	NA = "N/A"
 )
 
 type CFG struct {
@@ -72,6 +73,8 @@ func main() {
 		log.Fatal(err)
 	}
 
+	showMeta()
+
 	for {
 		select {
 		case <-timerPoll.C:
@@ -86,5 +89,23 @@ func main() {
 				go webclient.SendMetricWithWorkerPool(fmt.Sprintf("http://%s/updates/", *address), generator, *key, *rateLimit)
 			}
 		}
+	}
+}
+
+func showMeta() {
+	if buildVersion == "" {
+		fmt.Printf("Build version: %s\n", NA)
+	} else {
+		fmt.Printf("Build version: %s\n", buildVersion)
+	}
+	if buildCommit == "" {
+		fmt.Printf("Build commit: %s\n", NA)
+	} else {
+		fmt.Printf("Build commit: %s\n", buildCommit)
+	}
+	if buildDate == "" {
+		fmt.Printf("Build date: %s\n", NA)
+	} else {
+		fmt.Printf("Build date: %s\n", buildDate)
 	}
 }
