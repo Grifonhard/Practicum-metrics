@@ -5,7 +5,6 @@ import (
 	"database/sql"
 	"database/sql/driver"
 	"errors"
-	"fmt"
 	"testing"
 	"time"
 
@@ -191,9 +190,8 @@ func TestQueryRetry_WithNilDB(t *testing.T) {
 	rows, err := db.queryRetry("SELECT 1")
 	assert.Error(t, err, "nil DB => ожидаем ошибку")
 	assert.Nil(t, rows, "rows должны быть nil, т.к. был возврат ошибки")
-	// vet тест требует руками
 	if rows != nil {
-		fmt.Println("rows must be nil")
+		assert.Nil(t, rows.Err(), "vet тест требует")
 	}
 }
 
@@ -313,7 +311,7 @@ func (m *mockDBConnMemory) List(metricOneValue, metricArrayValues string) (map[s
 		if ms.MetricType == metricOneValue {
 			typeValue[ms.MetricName] = v
 		} else {
-			// Можно возвращать ErrUnexpectedMetricType
+			return nil, nil, ErrUnexpectedMetricType
 		}
 	}
 
@@ -322,7 +320,7 @@ func (m *mockDBConnMemory) List(metricOneValue, metricArrayValues string) (map[s
 		if ms.MetricType == metricArrayValues {
 			typeValues[ms.MetricName] = slice
 		} else {
-			// Можно возвращать ErrUnexpectedMetricType
+			return nil, nil, ErrUnexpectedMetricType
 		}
 	}
 
