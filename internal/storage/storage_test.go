@@ -17,7 +17,6 @@ import (
 	"github.com/Grifonhard/Practicum-metrics/internal/storage/fileio"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"github.com/DATA-DOG/go-sqlmock"
 )
 
 type MockLogger struct{}

@@ -32,7 +32,7 @@ func New(intervalBackup int, filepathBackup string, restoreFromBackup bool, db p
 	}
 
     
-	if dbStr, ok := db.(*psql.DB); ok && dbStr != nil {
+	if db != nil {
 		storage.DB = db
 
 		err = db.CreateMetricsTable()

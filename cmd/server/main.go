@@ -78,6 +78,7 @@ func main() {
 		log.Fatal(err)
 	}
 
+	var dbInter psql.StorDB
 	var db *psql.DB
 	if *databaseDsn != "" {
 		logger.Info(fmt.Sprintf("Database DSN: %s\n", *databaseDsn))
@@ -85,9 +86,10 @@ func main() {
 		if err != nil {
 			log.Fatal(err)
 		}
+		dbInter = db
 	}
 
-	stor, err := storage.New(*storeInterval, *fileStoragePath, *restore, db)
+	stor, err := storage.New(*storeInterval, *fileStoragePath, *restore, dbInter)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -102,7 +104,7 @@ func main() {
 
 func initRouter(stor *storage.MemStorage, db *psql.DB, key string) *gin.Engine {
 	router := gin.Default()
-	router.LoadHTMLGlob("templates/*")
+	router.LoadHTMLGlob("../../templates/*")
 
 	router.POST("/update/", web.ReqRespLogger(""), web.DataExtraction(), web.RespEncode(), web.Update(stor))
 	router.POST("/update/:type/:name/:value", web.ReqRespLogger(""), web.DataExtraction(), web.Update(stor))
