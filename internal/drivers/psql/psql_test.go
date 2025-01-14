@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"database/sql/driver"
 	"errors"
+	"fmt"
 	"testing"
 	"time"
 
@@ -190,6 +191,10 @@ func TestQueryRetry_WithNilDB(t *testing.T) {
 	rows, err := db.queryRetry("SELECT 1")
 	assert.Error(t, err, "nil DB => ожидаем ошибку")
 	assert.Nil(t, rows, "rows должны быть nil, т.к. был возврат ошибки")
+	// vet тест требует руками
+	if rows != nil {
+		fmt.Println("rows must be nil")
+	}
 }
 
 // driverStub — заглушка, реализующая driver.Driver
