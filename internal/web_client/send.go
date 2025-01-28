@@ -277,8 +277,21 @@ func sendWorker(ctx context.Context, wg *sync.WaitGroup, url, keyHash string, in
 				errChan <- err
 				return
 			}
+			// шифрование, если есть ключ
+			var finalBody *bytes.Buffer
+			if  cryptoutils.PublicKey != nil {
+				encrypted, err := cryptoutils.EncryptRSA(compressed.Bytes(), cryptoutils.PublicKey)
+				if err != nil {
+					logger.Error("error encrypting data: ", err)
+					return
+				}
+				requestBody := []byte(fmt.Sprintf(`{"data":"%s"}`, encrypted))
+				finalBody = bytes.NewBuffer(requestBody)
+			} else {
+				finalBody = compressed
+			}
 			//подготовка реквеста и клиента
-			req, err := http.NewRequest(http.MethodPost, url, compressed)
+			req, err := http.NewRequest(http.MethodPost, url, finalBody)
 			if err != nil {
 				errChan <- err
 				return
