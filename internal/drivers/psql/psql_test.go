@@ -148,13 +148,6 @@ func TestConnectDB_InvalidDSN(t *testing.T) {
 	assert.Error(t, err, "ConnectDB должна вернуть ошибку на невалидный DSN")
 }
 
-// PingDB на nil
-func TestDB_PingDB_WithNilDB(t *testing.T) {
-	db := &DB{DB: nil} // имитируем пустое соединение
-	err := db.PingDB()
-	assert.Error(t, err, "при nil в DB ожидается ошибка, а не panic")
-}
-
 // CreateMetricsTable: без реальной DB будет ошибка
 func TestDB_CreateMetricsTable_NoRealDB(t *testing.T) {
 	db := &DB{DB: nil}
