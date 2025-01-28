@@ -7,6 +7,7 @@ import (
 	"os"
 	"time"
 
+	cryptoutils "github.com/Grifonhard/Practicum-metrics/internal/crypto_utils"
 	"github.com/Grifonhard/Practicum-metrics/internal/logger"
 	metgen "github.com/Grifonhard/Practicum-metrics/internal/met_gen"
 	webclient "github.com/Grifonhard/Practicum-metrics/internal/web_client"
@@ -32,6 +33,7 @@ type CFG struct {
 	PollInterval   *int    `env:"POLL_INTERVAL"`
 	Key            *string `env:"KEY"`
 	RateLimit      *int    `env:"RATE_LIMIT"`
+	CryptoKey      *string `env:"CRYPTO_KEY"`
 }
 
 func main() {
@@ -40,6 +42,8 @@ func main() {
 	pollInterval := flag.Int("p", DEFAULTPOLLINTERVAL, "секунд частота опроса метрик")
 	key := flag.String("k", "", "ключ для хэша")
 	rateLimit := flag.Int("l", 0, "ограничение количества одновременно исходящих запросов")
+	cryptoKeyPath := flag.String("crypto-key", "", "path to RSA public key (for encryption)")
+
 
 	flag.Parse()
 
@@ -63,6 +67,17 @@ func main() {
 	}
 	if cfg.RateLimit != nil {
 		rateLimit = cfg.RateLimit
+	}
+	if cfg.CryptoKey != nil && *cfg.CryptoKey != "" {
+		cryptoKeyPath = cfg.CryptoKey
+	}
+
+	if *cryptoKeyPath != "" {
+		cryptoutils.PublicKey, err = cryptoutils.LoadPublicKey(*cryptoKeyPath)
+		if err != nil {
+			log.Fatal(err)
+		}
+		logger.Info("public key successfully loaded")
 	}
 
 	generator := metgen.New()
