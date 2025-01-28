@@ -19,7 +19,7 @@ func LoadPublicKey(path string) (*rsa.PublicKey, error) {
 	}
 	block, _ := pem.Decode(data)
 	if block == nil {
-		return nil, ErrParsePEM
+		return nil, ErrParsePEMpubl
 	}
 	pub, err := x509.ParsePKIXPublicKey(block.Bytes)
 	if err != nil {

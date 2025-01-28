@@ -8,6 +8,7 @@ import (
 	"log"
 	"os"
 
+	cryptoutils "github.com/Grifonhard/Practicum-metrics/internal/crypto_utils"
 	"github.com/Grifonhard/Practicum-metrics/internal/drivers/psql"
 	"github.com/Grifonhard/Practicum-metrics/internal/logger"
 	"github.com/Grifonhard/Practicum-metrics/internal/storage"
@@ -24,7 +25,7 @@ const (
 	DEFAULTADDR          = "localhost:8080"
 	DEFAULTSTOREINTERVAL = 300
 	DEFAULTRESTORE       = true
-	NA = "N/A"
+	NA                   = "N/A"
 )
 
 type CFG struct {
@@ -34,6 +35,7 @@ type CFG struct {
 	Restore         *bool   `env:"RESTORE"`
 	DatabaseDsn     *string `env:"DATABASE_DSN"`
 	Key             *string `env:"KEY"`
+	CryptoKey       *string `env:"CRYPTO_KEY"`
 }
 
 func main() {
@@ -43,6 +45,7 @@ func main() {
 	restore := flag.Bool("r", DEFAULTRESTORE, "restore from backup")
 	databaseDsn := flag.String("d", "", "database connect")
 	key := flag.String("k", "", "ключ для хэша")
+	cryptoKeyPath := flag.String("crypto-key", "", "Path to RSA private key (for decryption)")
 
 	flag.Parse()
 
@@ -69,6 +72,17 @@ func main() {
 	}
 	if cfg.Key != nil {
 		key = cfg.Key
+	}
+	if cfg.CryptoKey != nil && *cfg.CryptoKey != "" {
+		cryptoKeyPath = cfg.CryptoKey
+	}
+
+	if *cryptoKeyPath != "" {
+		cryptoutils.PrivateKey, err = cryptoutils.LoadPrivateKey(*cryptoKeyPath)
+		if err != nil {
+			log.Fatal(err)
+		}
+		logger.Info("private key successfully loaded")
 	}
 
 	showMeta()
@@ -112,7 +126,7 @@ func initRouter(stor *storage.MemStorage, db *psql.DB, key string) *gin.Engine {
 
 	router.POST("/update/", web.ReqRespLogger(""), web.DataExtraction(), web.RespEncode(), web.Update(stor))
 	router.POST("/update/:type/:name/:value", web.ReqRespLogger(""), web.DataExtraction(), web.Update(stor))
-	router.POST("/updates/", web.PseudoAuth(key), web.ReqRespLogger(key), web.DataExtraction(), web.Updates(stor))
+	router.POST("/updates/", web.PseudoAuth(key), cryptoutils.DecryptBody(), web.ReqRespLogger(key), web.DataExtraction(), web.Updates(stor))
 	router.GET("/value/:type/:name", web.ReqRespLogger(""), web.DataExtraction(), web.Get(stor))
 	router.POST("/value/", web.ReqRespLogger(""), web.RespEncode(), web.GetJSON(stor))
 	router.GET("/", web.ReqRespLogger(""), web.RespEncode(), web.List(stor))

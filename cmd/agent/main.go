@@ -16,15 +16,15 @@ import (
 
 var (
 	buildVersion = "NA"
-	buildDate = "NA"
-    buildCommit = "NA"
+	buildDate    = "NA"
+	buildCommit  = "NA"
 )
 
 const (
 	DEFAULTADDR           = "localhost:8080"
 	DEFAULTREPORTINTERVAL = 10
 	DEFAULTPOLLINTERVAL   = 2
-	NA = "N/A"
+	NA                    = "N/A"
 )
 
 type CFG struct {
@@ -43,7 +43,6 @@ func main() {
 	key := flag.String("k", "", "ключ для хэша")
 	rateLimit := flag.Int("l", 0, "ограничение количества одновременно исходящих запросов")
 	cryptoKeyPath := flag.String("crypto-key", "", "path to RSA public key (for encryption)")
-
 
 	flag.Parse()
 
