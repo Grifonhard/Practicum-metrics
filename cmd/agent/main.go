@@ -13,9 +13,11 @@ import (
 	"github.com/caarlos0/env/v10"
 )
 
-var buildVersion string
-var buildDate string
-var buildCommit string
+var (
+	buildVersion = "NA"
+	buildDate = "NA"
+    buildCommit = "NA"
+)
 
 const (
 	DEFAULTADDR           = "localhost:8080"
@@ -93,19 +95,7 @@ func main() {
 }
 
 func showMeta() {
-	if buildVersion == "" {
-		fmt.Printf("Build version: %s\n", NA)
-	} else {
-		fmt.Printf("Build version: %s\n", buildVersion)
-	}
-	if buildCommit == "" {
-		fmt.Printf("Build commit: %s\n", NA)
-	} else {
-		fmt.Printf("Build commit: %s\n", buildCommit)
-	}
-	if buildDate == "" {
-		fmt.Printf("Build date: %s\n", NA)
-	} else {
-		fmt.Printf("Build date: %s\n", buildDate)
-	}
+	fmt.Printf("Build version: %s\n", buildVersion)
+	fmt.Printf("Build commit: %s\n", buildCommit)
+	fmt.Printf("Build date: %s\n", buildDate)
 }
