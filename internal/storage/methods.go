@@ -31,6 +31,7 @@ func New(intervalBackup int, filepathBackup string, restoreFromBackup bool, db p
 		return nil, fmt.Errorf("fail while create/open file: %w", err)
 	}
 
+    
 	if db != nil {
 		storage.DB = db
 

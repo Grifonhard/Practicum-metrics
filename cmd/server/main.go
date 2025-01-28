@@ -1,3 +1,5 @@
+//go:generate ./generate_version.sh
+
 package main
 
 import (
@@ -14,10 +16,15 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
+var buildVersion string
+var buildDate string
+var buildCommit string
+
 const (
 	DEFAULTADDR          = "localhost:8080"
 	DEFAULTSTOREINTERVAL = 300
 	DEFAULTRESTORE       = true
+	NA = "N/A"
 )
 
 type CFG struct {
@@ -64,13 +71,14 @@ func main() {
 		key = cfg.Key
 	}
 
-	fmt.Println(key)
+	showMeta()
 
 	err = logger.Init(os.Stdout, 4)
 	if err != nil {
 		log.Fatal(err)
 	}
 
+	var dbInter psql.StorDB
 	var db *psql.DB
 	if *databaseDsn != "" {
 		logger.Info(fmt.Sprintf("Database DSN: %s\n", *databaseDsn))
@@ -78,9 +86,14 @@ func main() {
 		if err != nil {
 			log.Fatal(err)
 		}
+		if pingErr := db.Ping(); pingErr != nil {
+			_ = db.Close()
+			log.Fatal(err)
+		}
+		dbInter = db
 	}
 
-	stor, err := storage.New(*storeInterval, *fileStoragePath, *restore, db)
+	stor, err := storage.New(*storeInterval, *fileStoragePath, *restore, dbInter)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -95,7 +108,7 @@ func main() {
 
 func initRouter(stor *storage.MemStorage, db *psql.DB, key string) *gin.Engine {
 	router := gin.Default()
-	router.LoadHTMLGlob("templates/*")
+	router.LoadHTMLGlob("../../templates/*")
 
 	router.POST("/update/", web.ReqRespLogger(""), web.DataExtraction(), web.RespEncode(), web.Update(stor))
 	router.POST("/update/:type/:name/:value", web.ReqRespLogger(""), web.DataExtraction(), web.Update(stor))
@@ -108,4 +121,22 @@ func initRouter(stor *storage.MemStorage, db *psql.DB, key string) *gin.Engine {
 	}
 
 	return router
+}
+
+func showMeta() {
+	if buildVersion == "" {
+		fmt.Printf("Build version: %s\n", NA)
+	} else {
+		fmt.Printf("Build version: %s\n", buildVersion)
+	}
+	if buildCommit == "" {
+		fmt.Printf("Build commit: %s\n", NA)
+	} else {
+		fmt.Printf("Build commit: %s\n", buildCommit)
+	}
+	if buildDate == "" {
+		fmt.Printf("Build date: %s\n", NA)
+	} else {
+		fmt.Printf("Build date: %s\n", buildDate)
+	}
 }

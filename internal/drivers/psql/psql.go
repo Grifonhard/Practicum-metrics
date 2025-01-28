@@ -30,9 +30,8 @@ func ConnectDB(dsn string) (*DB, error) {
 		return &DB{
 			DB: db,
 		}, nil
-	} else {
-		return nil, err
 	}
+	return nil, err
 }
 
 // PingDB пинг базы данных
@@ -47,6 +46,12 @@ func (db *DB) Close() error {
 
 // CreateMetricsTable создание таблицы для хранения метрик
 func (db *DB) CreateMetricsTable() error {
+	if db == nil {
+		return ErrNotInit
+	}
+	if db.DB == nil {
+		return ErrNotInit
+	}
 	query := fmt.Sprintf(`CREATE TABLE IF NOT EXISTS %s (
 							%s %s,
 							%s %s

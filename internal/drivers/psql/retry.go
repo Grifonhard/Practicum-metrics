@@ -34,6 +34,12 @@ func openRetry(driverName string, dataSourceName string) (db *sql.DB, err error)
 
 // execRetry повторение попыток отправить директивы в базу 
 func (db *DB) execRetry(query string, args ...any) (result sql.Result, err error) {
+	if db == nil {
+		return nil, ErrNotInit
+	}
+	if db.DB == nil {
+		return nil, ErrNotInit
+	}
 	for i := 0; i < MAXRETRIES; i++ {
 		result, err = db.Exec(query, args...)
 		if err != nil {
@@ -51,6 +57,12 @@ func (db *DB) execRetry(query string, args ...any) (result sql.Result, err error
 
 // rowScanRetry повторение попыток сканировать строку данных, пришедших из базы
 func (db *DB) rowScanRetry(row *sql.Row, dest ...any) (err error) {
+	if db == nil {
+		return ErrNotInit
+	}
+	if db.DB == nil {
+		return ErrNotInit
+	}
 	for i := 0; i < MAXRETRIES; i++ {
 		err = row.Scan(dest...)
 		if err != nil {
@@ -68,6 +80,12 @@ func (db *DB) rowScanRetry(row *sql.Row, dest ...any) (err error) {
 
 // queryRetry повторение попыток сделать запрос
 func (db *DB) queryRetry(query string, args ...any) (rows *sql.Rows, err error) {
+	if db == nil {
+		return nil, ErrNotInit
+	}
+	if db.DB == nil {
+		return nil, ErrNotInit
+	}
 	for i := 0; i < MAXRETRIES; i++ {
 		rows, err = db.Query(query, args...)
 		if err != nil {

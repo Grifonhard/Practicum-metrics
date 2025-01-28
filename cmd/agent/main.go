@@ -13,10 +13,17 @@ import (
 	"github.com/caarlos0/env/v10"
 )
 
+var (
+	buildVersion = "NA"
+	buildDate = "NA"
+    buildCommit = "NA"
+)
+
 const (
 	DEFAULTADDR           = "localhost:8080"
 	DEFAULTREPORTINTERVAL = 10
 	DEFAULTPOLLINTERVAL   = 2
+	NA = "N/A"
 )
 
 type CFG struct {
@@ -68,6 +75,8 @@ func main() {
 		log.Fatal(err)
 	}
 
+	showMeta()
+
 	for {
 		select {
 		case <-timerPoll.C:
@@ -83,4 +92,10 @@ func main() {
 			}
 		}
 	}
+}
+
+func showMeta() {
+	fmt.Printf("Build version: %s\n", buildVersion)
+	fmt.Printf("Build commit: %s\n", buildCommit)
+	fmt.Printf("Build date: %s\n", buildDate)
 }
