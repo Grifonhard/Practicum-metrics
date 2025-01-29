@@ -17,15 +17,10 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-var buildVersion string
-var buildDate string
-var buildCommit string
-
-const (
-	DEFAULTADDR          = "localhost:8080"
-	DEFAULTSTOREINTERVAL = 300
-	DEFAULTRESTORE       = true
-	NA                   = "N/A"
+var (
+	buildVersion = "NA"
+	buildDate    = "NA"
+	buildCommit  = "NA"
 )
 
 type CFG struct {

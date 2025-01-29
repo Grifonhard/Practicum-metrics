@@ -8,12 +8,6 @@ import (
 	"github.com/caarlos0/env/v10"
 )
 
-const (
-    DEFAULTADDR           = "localhost:8080"
-	DEFAULTREPORTINTERVAL = 10
-	DEFAULTPOLLINTERVAL   = 2
-)
-
 type Agent struct {
 	Addr           *string `env:"ADDRESS"`
 	ReportInterval *int    `env:"REPORT_INTERVAL"`
