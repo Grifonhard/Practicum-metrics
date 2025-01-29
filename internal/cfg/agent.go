@@ -146,8 +146,32 @@ func (a *AgentFile) loadAgentConfigFromFile(pathEnv, pathFlag *string) error {
     if err != nil {
         return err
     }
-    if err = json.Unmarshal(data, a); err != nil {
+
+    type interm struct {
+        Address        *string `json:"address"`
+        ReportInterval *string `json:"report_interval"`
+        PollInterval   *string `json:"poll_interval"`
+        CryptoKey      *string `json:"crypto_key"`
+        Key            *string `json:"key"`
+        RateLimit      *int    `json:"rate_limit"`
+    }
+
+    var im interm
+
+    if err = json.Unmarshal(data, &im); err != nil {
         return err
     }
+
+    a.Address = im.Address
+    repInter, err := parseStrToInt(im.ReportInterval)
+    if err != nil { return err }
+    a.ReportInterval = repInter
+    pollInter, err := parseStrToInt(im.PollInterval)
+    if err != nil { return err }
+    a.PollInterval = pollInter
+    a.CryptoKey = im.CryptoKey
+    a.Key = im.Key
+    a.RateLimit = im.RateLimit
+
     return nil
 }
