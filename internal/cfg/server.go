@@ -176,6 +176,7 @@ func (s *ServerFile) loadConfigFromFile(pathEnv, pathFlag *string) error {
 
 	storInterval, err := parseStrToInt(im.StoreInterval)
 	if err != nil {
+		return err
 	}
 
 	s.Address = im.Address
