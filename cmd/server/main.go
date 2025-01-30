@@ -26,6 +26,9 @@ func main() {
 
 	var cfg cfg.Server
 	err := cfg.Load()
+	if err != nil {
+		log.Fatal(err)
+	}
 
 	if *cfg.CryptoKey != "" {
 		cryptoutils.PrivateKey, err = cryptoutils.LoadPrivateKey(*cfg.CryptoKey)

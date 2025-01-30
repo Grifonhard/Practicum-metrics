@@ -20,9 +20,12 @@ var (
 )
 
 func main() {
-	
+
 	var cfg cfg.Agent
 	err := cfg.Load()
+	if err != nil {
+		log.Fatal(err)
+	}
 
 	if *cfg.CryptoKey != "" {
 		cryptoutils.PublicKey, err = cryptoutils.LoadPublicKey(*cfg.CryptoKey)

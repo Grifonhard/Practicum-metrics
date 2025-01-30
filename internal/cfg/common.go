@@ -10,7 +10,7 @@ const (
 	SECONDS = "s"
 	MINUTES = "m"
 	HOURS   = "h"
-	DAYS = "d"
+	DAYS    = "d"
 )
 
 func parseStrToInt(source *string) (*int, error) {
