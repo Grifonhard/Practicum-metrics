@@ -6,6 +6,9 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"os/signal"
+	"sync"
+	"syscall"
 
 	"github.com/Grifonhard/Practicum-metrics/internal/cfg"
 	cryptoutils "github.com/Grifonhard/Practicum-metrics/internal/crypto_utils"
@@ -67,19 +70,31 @@ func main() {
 
 	go stor.BackupLoop()
 
-	r := initRouter(stor, db, *cfg.Key)
+	// graceful shutdown
+	sig := make(chan os.Signal, 1)
+	signal.Notify(sig, syscall.SIGQUIT, syscall.SIGTERM, syscall.SIGINT)
+	var wg sync.WaitGroup
 
+	r := initRouter(&wg, stor, db, *cfg.Key)
+	
 	logger.Info(fmt.Sprintf("Server start %s\n", *cfg.Addr))
-	log.Fatal(r.Run(*cfg.Addr))
+
+	go func (){
+		log.Fatal(r.Run(*cfg.Addr))
+	}()
+	
+	<-sig
+	wg.Wait()
+	logger.Info("server shutdown")
 }
 
-func initRouter(stor *storage.MemStorage, db *psql.DB, key string) *gin.Engine {
+func initRouter(wg *sync.WaitGroup, stor *storage.MemStorage, db *psql.DB, key string) *gin.Engine {
 	router := gin.Default()
 	router.LoadHTMLGlob("../../templates/*")
 
-	router.POST("/update/", web.ReqRespLogger(""), web.DataExtraction(), web.RespEncode(), web.Update(stor))
-	router.POST("/update/:type/:name/:value", web.ReqRespLogger(""), web.DataExtraction(), web.Update(stor))
-	router.POST("/updates/", web.PseudoAuth(key), cryptoutils.DecryptBody(), web.ReqRespLogger(key), web.DataExtraction(), web.Updates(stor))
+	router.POST("/update/", web.WGadd(wg), web.ReqRespLogger(""), web.DataExtraction(), web.RespEncode(), web.Update(wg, stor))
+	router.POST("/update/:type/:name/:value", web.WGadd(wg), web.ReqRespLogger(""), web.DataExtraction(), web.Update(wg, stor))
+	router.POST("/updates/", web.WGadd(wg), web.PseudoAuth(key), cryptoutils.DecryptBody(), web.ReqRespLogger(key), web.DataExtraction(), web.Updates(wg, stor))
 	router.GET("/value/:type/:name", web.ReqRespLogger(""), web.DataExtraction(), web.Get(stor))
 	router.POST("/value/", web.ReqRespLogger(""), web.RespEncode(), web.GetJSON(stor))
 	router.GET("/", web.ReqRespLogger(""), web.RespEncode(), web.List(stor))
