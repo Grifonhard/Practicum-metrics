@@ -44,10 +44,31 @@ type AgentFlags struct {
 // все поля гарантированно будут не nil
 // в случае отсутствия данных "" или 0
 func (a *Agent) Load() error {
-	err := env.Parse(a)
+	// caarlos0/env криво парсит структуры с указателями
+	type agWhithoutPtr struct {
+		Addr           string `env:"ADDRESS"`
+		ReportInterval int    `env:"REPORT_INTERVAL"`
+		PollInterval   int    `env:"POLL_INTERVAL"`
+		Key            string `env:"KEY"`
+		RateLimit      int    `env:"RATE_LIMIT"`
+		CryptoKey      string `env:"CRYPTO_KEY"`
+		Config         string `env:"CONFIG"`
+	}
+
+	var a2 agWhithoutPtr
+
+	err := env.Parse(&a2)
 	if err != nil {
 		return err
 	}
+
+	a.Addr = &a2.Addr
+	a.ReportInterval = &a2.ReportInterval
+	a.PollInterval = &a2.PollInterval
+	a.Key = &a2.Key
+	a.RateLimit = &a2.RateLimit
+	a.CryptoKey = &a2.CryptoKey
+	a.Config = &a2.Config
 
 	flags := &AgentFlags{}
 	err = flags.loadConfigFromFlags()
@@ -58,8 +79,8 @@ func (a *Agent) Load() error {
 	file := &AgentFile{}
 	err = file.loadConfigFromFile(a.Config, flags.Config)
 	if errors.Is(err, ErrCFGFile) {
-        logger.Info(err.Error())
-    } else if err != nil {
+		logger.Info(err.Error())
+	} else if err != nil {
 		return err
 	}
 
@@ -67,7 +88,7 @@ func (a *Agent) Load() error {
 }
 
 func (a *Agent) Resolve(flags *AgentFlags, file *AgentFile) error {
-	if a.Addr != nil {
+	if a.Addr != nil && *a.Addr != "" {
 	} else if flags.Address != nil && *flags.Address != "" {
 		a.Addr = flags.Address
 	} else if file.Address != nil {
@@ -76,7 +97,7 @@ func (a *Agent) Resolve(flags *AgentFlags, file *AgentFile) error {
 		addr := DEFAULTADDR
 		a.Addr = &addr
 	}
-	if a.ReportInterval != nil {
+	if a.ReportInterval != nil && *a.ReportInterval != 0 {
 	} else if flags.ReportInterval != nil && *flags.ReportInterval != 0 {
 		a.ReportInterval = flags.ReportInterval
 	} else if file.ReportInterval != nil {
@@ -85,7 +106,7 @@ func (a *Agent) Resolve(flags *AgentFlags, file *AgentFile) error {
 		repInterval := DEFAULTREPORTINTERVAL
 		a.ReportInterval = &repInterval
 	}
-	if a.PollInterval != nil {
+	if a.PollInterval != nil && *a.PollInterval != 0 {
 	} else if flags.PollInterval != nil && *flags.PollInterval != 0 {
 		a.PollInterval = flags.PollInterval
 	} else if file.PollInterval != nil {
@@ -94,7 +115,7 @@ func (a *Agent) Resolve(flags *AgentFlags, file *AgentFile) error {
 		pollInterval := DEFAULTPOLLINTERVAL
 		a.PollInterval = &pollInterval
 	}
-	if a.Key != nil {
+	if a.Key != nil && *a.Key != "" {
 	} else if flags.Key != nil && *flags.Key != "" {
 		a.Key = flags.Key
 	} else if file.Key != nil {
@@ -103,7 +124,7 @@ func (a *Agent) Resolve(flags *AgentFlags, file *AgentFile) error {
 		var key string
 		a.Key = &key
 	}
-	if a.RateLimit != nil {
+	if a.RateLimit != nil && *a.RateLimit != 0 {
 	} else if flags.RateLimit != nil && *flags.RateLimit != 0 {
 		a.RateLimit = flags.RateLimit
 	} else if file.RateLimit != nil {
@@ -112,7 +133,7 @@ func (a *Agent) Resolve(flags *AgentFlags, file *AgentFile) error {
 		var rateLimit int
 		a.RateLimit = &rateLimit
 	}
-	if a.CryptoKey != nil {
+	if a.CryptoKey != nil && *a.CryptoKey != "" {
 	} else if flags.CryptoKey != nil && *flags.CryptoKey != "" {
 		a.CryptoKey = flags.CryptoKey
 	} else if file.CryptoKey != nil {
@@ -127,7 +148,7 @@ func (a *Agent) Resolve(flags *AgentFlags, file *AgentFile) error {
 func (a *AgentFlags) loadConfigFromFlags() error {
 	a.Address = flag.String("a", "", "адрес сервера")
 	a.ReportInterval = flag.Int("r", 0, "секунд частота отправки метрик")
-	a.PollInterval = flag.Int("p", DEFAULTPOLLINTERVAL, "секунд частота опроса метрик")
+	a.PollInterval = flag.Int("p", 0, "секунд частота опроса метрик")
 	a.Key = flag.String("k", "", "ключ для хэша")
 	a.RateLimit = flag.Int("l", 0, "ограничение количества одновременно исходящих запросов")
 	a.CryptoKey = flag.String("crypto-key", "", "path to RSA public key (for encryption)")

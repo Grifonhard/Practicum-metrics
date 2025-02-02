@@ -47,10 +47,33 @@ type ServerFile struct {
 // все поля гарантированно будут не nil
 // в случае отсутствия данных "" или 0
 func (s *Server) Load() error {
-	err := env.Parse(s)
+	// caarlos0/env криво парсит структуры с указателями
+	type serWhithoutPtr struct {
+		Addr            string `env:"ADDRESS"`
+		StoreInterval   int    `env:"STORE_INTERVAL"`
+		FileStoragePath string `env:"FILE_STORAGE_PATH"`
+		Restore         bool   `env:"RESTORE"`
+		DatabaseDsn     string `env:"DATABASE_DSN"`
+		Key             string `env:"KEY"`
+		CryptoKey       string `env:"CRYPTO_KEY"`
+		Config          string `env:"CONFIG"`
+	}
+
+	var ser serWhithoutPtr
+
+	err := env.Parse(&ser)
 	if err != nil {
 		return err
 	}
+
+	s.Addr = &ser.Addr
+	s.StoreInterval = &ser.StoreInterval
+	s.FileStoragePath = &ser.FileStoragePath
+	s.Restore = &ser.Restore
+	s.DatabaseDsn = &ser.DatabaseDsn
+	s.Key = &ser.Key
+	s.CryptoKey = &ser.CryptoKey
+	s.Config = &ser.Config
 
 	flags := &ServerFlags{}
 	err = flags.loadConfigFromFlags()
@@ -61,8 +84,8 @@ func (s *Server) Load() error {
 	file := &ServerFile{}
 	err = file.loadConfigFromFile(s.Config, flags.Config)
 	if errors.Is(err, ErrCFGFile) {
-        logger.Info(err.Error())
-    } else if err != nil {
+		logger.Info(err.Error())
+	} else if err != nil {
 		return err
 	}
 
@@ -70,7 +93,7 @@ func (s *Server) Load() error {
 }
 
 func (s *Server) Resolve(flags *ServerFlags, file *ServerFile) error {
-	if s.Addr != nil {
+	if s.Addr != nil && *s.Addr != "" {
 	} else if flags.Address != nil && *flags.Address != "" {
 		s.Addr = flags.Address
 	} else if file.Address != nil {
@@ -79,7 +102,7 @@ func (s *Server) Resolve(flags *ServerFlags, file *ServerFile) error {
 		addr := DEFAULTADDR
 		s.Addr = &addr
 	}
-	if s.StoreInterval != nil {
+	if s.StoreInterval != nil && *s.StoreInterval != 0 {
 	} else if flags.StoreInterval != nil && *flags.StoreInterval != 0 {
 		s.StoreInterval = flags.StoreInterval
 	} else if file.StoreInterval != nil {
@@ -88,16 +111,16 @@ func (s *Server) Resolve(flags *ServerFlags, file *ServerFile) error {
 		interval := DEFAULTSTOREINTERVAL
 		s.StoreInterval = &interval
 	}
-	if s.Restore != nil {
-	} else if flags.Restore != nil {
+	if s.Restore != nil && *s.Restore {
+	} else if flags.Restore != nil && *flags.Restore {
 		s.Restore = flags.Restore
-	} else if file.Restore != nil {
+	} else if file.Restore != nil && *file.Restore {
 		s.Restore = file.Restore
 	} else {
 		restore := DEFAULTRESTORE
 		s.Restore = &restore
 	}
-	if s.FileStoragePath != nil {
+	if s.FileStoragePath != nil && *s.FileStoragePath != "" {
 	} else if flags.FileStoragePath != nil && *flags.FileStoragePath != "" {
 		s.FileStoragePath = flags.FileStoragePath
 	} else if file.StoreFile != nil {
@@ -106,16 +129,16 @@ func (s *Server) Resolve(flags *ServerFlags, file *ServerFile) error {
 		var file string
 		s.FileStoragePath = &file
 	}
-	if s.DatabaseDsn != nil {
+	if s.DatabaseDsn != nil && *s.DatabaseDsn != "" {
 	} else if flags.DatabaseDsn != nil && *flags.DatabaseDsn != "" {
 		s.DatabaseDsn = flags.DatabaseDsn
 	} else if file.DatabaseDSN != nil {
 		s.DatabaseDsn = file.DatabaseDSN
-	} else  {
+	} else {
 		var dbDSN string
 		s.DatabaseDsn = &dbDSN
 	}
-	if s.Key != nil {
+	if s.Key != nil && *s.Key != "" {
 	} else if flags.Key != nil && *flags.Key != "" {
 		s.Key = flags.Key
 	} else if file.Key != nil {
@@ -124,7 +147,7 @@ func (s *Server) Resolve(flags *ServerFlags, file *ServerFile) error {
 		var key string
 		s.Key = &key
 	}
-	if s.CryptoKey != nil {
+	if s.CryptoKey != nil && *s.CryptoKey != "" {
 	} else if flags.CryptoKey != nil && *flags.CryptoKey != "" {
 		s.CryptoKey = flags.CryptoKey
 	} else if file.CryptoKey != nil {
