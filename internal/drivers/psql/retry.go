@@ -32,7 +32,7 @@ func openRetry(driverName string, dataSourceName string) (db *sql.DB, err error)
 	return
 }
 
-// execRetry повторение попыток отправить директивы в базу 
+// execRetry повторение попыток отправить директивы в базу
 func (db *DB) execRetry(query string, args ...any) (result sql.Result, err error) {
 	if db == nil {
 		return nil, ErrNotInit

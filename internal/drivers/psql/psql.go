@@ -26,12 +26,16 @@ type DB struct {
 // ConnectDB подключение к базе данных
 func ConnectDB(dsn string) (*DB, error) {
 	db, err := openRetry("pgx", dsn)
-	if err == nil {
-		return &DB{
-			DB: db,
-		}, nil
+	if err != nil {
+		return nil, err
 	}
-	return nil, err
+	err = db.Ping()
+	if err != nil {
+		return nil, err
+	}
+	return &DB{
+		DB: db,
+	}, nil
 }
 
 // PingDB пинг базы данных
@@ -39,7 +43,7 @@ func (db *DB) PingDB() error {
 	return db.DB.Ping()
 }
 
-// Close закрытие соединения с базой данных 
+// Close закрытие соединения с базой данных
 func (db *DB) Close() error {
 	return db.DB.Close()
 }

@@ -55,10 +55,6 @@ func main() {
 		if err != nil {
 			log.Fatal(err)
 		}
-		if pingErr := db.Ping(); pingErr != nil {
-			_ = db.Close()
-			log.Fatal(err)
-		}
 		dbInter = db
 	}
 
