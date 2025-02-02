@@ -1,9 +1,13 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"log"
 	"os"
+	"os/signal"
+	"sync"
+	"syscall"
 	"time"
 
 	"github.com/Grifonhard/Practicum-metrics/internal/cfg"
@@ -38,7 +42,9 @@ func main() {
 	generator := metgen.New()
 
 	timerPoll := time.NewTicker(time.Duration(*cfg.PollInterval) * time.Second)
+	defer timerPoll.Stop()
 	timerReport := time.NewTicker(time.Duration(*cfg.ReportInterval) * time.Second)
+	defer timerReport.Stop()
 
 	err = logger.Init(os.Stdout, 4)
 	if err != nil {
@@ -46,6 +52,9 @@ func main() {
 	}
 
 	showMeta()
+
+	ctx, _ := signal.NotifyContext(context.Background(), syscall.SIGQUIT, syscall.SIGTERM, syscall.SIGINT)
+	var wg sync.WaitGroup
 
 	for {
 		select {
@@ -56,10 +65,14 @@ func main() {
 			}
 		case <-timerReport.C:
 			if *cfg.RateLimit == 0 {
-				go webclient.SendMetric(fmt.Sprintf("http://%s/updates/", *cfg.Addr), generator, *cfg.Key, webclient.SENDARRAY)
+				go webclient.SendMetric(&wg, fmt.Sprintf("http://%s/updates/", *cfg.Addr), generator, *cfg.Key, webclient.SENDARRAY)
 			} else {
-				go webclient.SendMetricWithWorkerPool(fmt.Sprintf("http://%s/updates/", *cfg.Addr), generator, *cfg.Key, *cfg.RateLimit)
+				go webclient.SendMetricWithWorkerPool(&wg, fmt.Sprintf("http://%s/updates/", *cfg.Addr), generator, *cfg.Key, *cfg.RateLimit)
 			}
+		case <- ctx.Done():
+			wg.Wait()
+			logger.Info("agent shut down")
+			return
 		}
 	}
 }

@@ -42,7 +42,9 @@ const (
 )
 
 // SendMetric агрегирует и отправляет данные на сервер
-func SendMetric(url string, gen *metgen.MetGen, keyHash, sendMethod string) {
+func SendMetric(wg *sync.WaitGroup, url string, gen *metgen.MetGen, keyHash, sendMethod string) {
+	wg.Add(1)
+	defer wg.Done()
 	ctx, cancel := context.WithCancel(context.Background())
 	ch := make(chan *Metrics)
 
@@ -200,7 +202,9 @@ func computeHMAC(value, key string) string {
 }
 
 // SendMetricWithWorkerPool асинхронная подготовка и отправка метрик
-func SendMetricWithWorkerPool(url string, gen *metgen.MetGen, keyHash string, rateLimit int) {
+func SendMetricWithWorkerPool(wgSig *sync.WaitGroup, url string, gen *metgen.MetGen, keyHash string, rateLimit int) {
+	wgSig.Add(1)
+	defer wgSig.Done()
 	collectG := make(chan metgen.OneMetric)
 	collectC := make(chan metgen.OneMetric)
 	workerChan := make(chan Metrics)
