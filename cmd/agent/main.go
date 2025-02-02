@@ -24,13 +24,17 @@ var (
 )
 
 func main() {
-
-	var cfg cfg.Agent
-	err := cfg.Load()
+	err := logger.Init(os.Stdout, 4)
 	if err != nil {
 		log.Fatal(err)
 	}
 
+	var cfg cfg.Agent
+	err = cfg.Load()
+	if err != nil {
+		log.Fatal(err)
+	}
+	
 	if *cfg.CryptoKey != "" {
 		cryptoutils.PublicKey, err = cryptoutils.LoadPublicKey(*cfg.CryptoKey)
 		if err != nil {
@@ -45,11 +49,6 @@ func main() {
 	defer timerPoll.Stop()
 	timerReport := time.NewTicker(time.Duration(*cfg.ReportInterval) * time.Second)
 	defer timerReport.Stop()
-
-	err = logger.Init(os.Stdout, 4)
-	if err != nil {
-		log.Fatal(err)
-	}
 
 	showMeta()
 

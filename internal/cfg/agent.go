@@ -2,9 +2,12 @@ package cfg
 
 import (
 	"encoding/json"
+	"errors"
 	"flag"
+	"fmt"
 	"os"
 
+	"github.com/Grifonhard/Practicum-metrics/internal/logger"
 	"github.com/caarlos0/env/v10"
 )
 
@@ -54,7 +57,9 @@ func (a *Agent) Load() error {
 
 	file := &AgentFile{}
 	err = file.loadConfigFromFile(a.Config, flags.Config)
-	if err != nil {
+	if errors.Is(err, ErrCFGFile) {
+        logger.Info(err.Error())
+    } else if err != nil {
 		return err
 	}
 
@@ -144,7 +149,7 @@ func (a *AgentFile) loadConfigFromFile(pathEnv, pathFlag *string) error {
 	}
 	data, err := os.ReadFile(path)
 	if err != nil {
-		return err
+		return fmt.Errorf("%w %s", ErrCFGFile, err.Error())
 	}
 
 	type interm struct {

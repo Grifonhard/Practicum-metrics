@@ -1,7 +1,7 @@
 package cfg
 
 const (
-	DEFAULTADDR = "localhost:8080"
+	DEFAULTADDR = "localhost:8082"
 )
 
 // костанты агента

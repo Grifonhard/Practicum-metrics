@@ -26,9 +26,13 @@ var (
 )
 
 func main() {
+	err := logger.Init(os.Stdout, 4)
+	if err != nil {
+		log.Fatal(err)
+	}
 
 	var cfg cfg.Server
-	err := cfg.Load()
+	err = cfg.Load()
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -42,11 +46,6 @@ func main() {
 	}
 
 	showMeta()
-
-	err = logger.Init(os.Stdout, 4)
-	if err != nil {
-		log.Fatal(err)
-	}
 
 	var dbInter psql.StorDB
 	var db *psql.DB
@@ -90,7 +89,7 @@ func main() {
 
 func initRouter(wg *sync.WaitGroup, stor *storage.MemStorage, db *psql.DB, key string) *gin.Engine {
 	router := gin.Default()
-	router.LoadHTMLGlob("../../templates/*")
+	router.LoadHTMLGlob("./templates/*")
 
 	router.POST("/update/", web.WGadd(wg), web.ReqRespLogger(""), web.DataExtraction(), web.RespEncode(), web.Update(wg, stor))
 	router.POST("/update/:type/:name/:value", web.WGadd(wg), web.ReqRespLogger(""), web.DataExtraction(), web.Update(wg, stor))

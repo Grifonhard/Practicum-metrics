@@ -2,9 +2,13 @@ package cfg
 
 import (
 	"encoding/json"
+	"errors"
 	"flag"
-	"github.com/caarlos0/env/v10"
+	"fmt"
 	"os"
+
+	"github.com/Grifonhard/Practicum-metrics/internal/logger"
+	"github.com/caarlos0/env/v10"
 )
 
 type Server struct {
@@ -56,7 +60,9 @@ func (s *Server) Load() error {
 
 	file := &ServerFile{}
 	err = file.loadConfigFromFile(s.Config, flags.Config)
-	if err != nil {
+	if errors.Is(err, ErrCFGFile) {
+        logger.Info(err.Error())
+    } else if err != nil {
 		return err
 	}
 
@@ -105,6 +111,9 @@ func (s *Server) Resolve(flags *ServerFlags, file *ServerFile) error {
 		s.DatabaseDsn = flags.DatabaseDsn
 	} else if file.DatabaseDSN != nil {
 		s.DatabaseDsn = file.DatabaseDSN
+	} else  {
+		var dbDSN string
+		s.DatabaseDsn = &dbDSN
 	}
 	if s.Key != nil {
 	} else if flags.Key != nil && *flags.Key != "" {
@@ -155,7 +164,7 @@ func (s *ServerFile) loadConfigFromFile(pathEnv, pathFlag *string) error {
 
 	data, err := os.ReadFile(path)
 	if err != nil {
-		return err
+		return fmt.Errorf("%w %s", ErrCFGFile, err.Error())
 	}
 
 	type interm struct {
