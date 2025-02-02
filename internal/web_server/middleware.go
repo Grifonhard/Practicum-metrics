@@ -240,7 +240,7 @@ func PseudoAuth(key string) gin.HandlerFunc {
 }
 
 // WGadd нужно только для того, чтобы обеспечить graceful shutdown
-func WGadd (wg *sync.WaitGroup) gin.HandlerFunc {
+func WGadd(wg *sync.WaitGroup) gin.HandlerFunc {
 	wg.Add(1)
 	return func(c *gin.Context) {
 		c.Next()

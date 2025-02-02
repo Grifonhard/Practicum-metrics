@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"os"
+	"sync"
 	"testing"
 
 	"github.com/Grifonhard/Practicum-metrics/internal/logger"
@@ -51,7 +52,10 @@ func TestPost(t *testing.T) {
 
 	router := gin.Default()
 
-	router.POST("/update/:type/:name/:value", DataExtraction(), Update(stor))
+	var wg sync.WaitGroup
+	wg.Add(1)
+
+	router.POST("/update/:type/:name/:value", DataExtraction(), Update(&wg, stor))
 
 	tests := []struct {
 		url     string

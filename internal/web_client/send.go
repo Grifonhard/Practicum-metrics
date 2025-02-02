@@ -88,7 +88,7 @@ func SendMetric(wg *sync.WaitGroup, url string, gen *metgen.MetGen, keyHash, sen
 			}
 			// шифрование, если есть ключ
 			var finalBody *bytes.Buffer
-			if  cryptoutils.PublicKey != nil {
+			if cryptoutils.PublicKey != nil {
 				encrypted, err := cryptoutils.EncryptRSA(compressed.Bytes(), cryptoutils.PublicKey)
 				if err != nil {
 					logger.Error("error encrypting data: ", err)
@@ -283,7 +283,7 @@ func sendWorker(ctx context.Context, wg *sync.WaitGroup, url, keyHash string, in
 			}
 			// шифрование, если есть ключ
 			var finalBody *bytes.Buffer
-			if  cryptoutils.PublicKey != nil {
+			if cryptoutils.PublicKey != nil {
 				encrypted, err := cryptoutils.EncryptRSA(compressed.Bytes(), cryptoutils.PublicKey)
 				if err != nil {
 					logger.Error("error encrypting data: ", err)
