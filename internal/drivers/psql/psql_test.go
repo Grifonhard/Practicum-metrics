@@ -53,13 +53,13 @@ func TestMetricString_Scan_NilValue(t *testing.T) {
 //  Заглушка без памяти  //
 // --------------------- //
 //
-// Эту «простую» заглушку оставим для демонстрации тестов 
+// Эту «простую» заглушку оставим для демонстрации тестов
 // PushReplace, PushAdd и т. п. (что они не падают).
 type mockDBConn struct{}
 
 var _ StorDB = (*mockDBConn)(nil)
 
-func (m *mockDBConn) Begin() (*sql.Tx, error)                                    { return nil, errors.New("not implemented") }
+func (m *mockDBConn) Begin() (*sql.Tx, error) { return nil, errors.New("not implemented") }
 func (m *mockDBConn) BeginTx(ctx context.Context, opts *sql.TxOptions) (*sql.Tx, error) {
 	return nil, errors.New("not implemented")
 }
@@ -84,11 +84,11 @@ func (m *mockDBConn) GetOneValue(metric string, metricName string) (float64, err
 func (m *mockDBConn) List(metricOneValue, metricArrayValues string) (map[string]float64, map[string][]float64, error) {
 	return nil, nil, ErrNoData
 }
-func (m *mockDBConn) Ping() error                       { return nil }
+func (m *mockDBConn) Ping() error { return nil }
 func (m *mockDBConn) PingContext(ctx context.Context) error {
 	return nil
 }
-func (m *mockDBConn) PingDB() error                     { return nil }
+func (m *mockDBConn) PingDB() error { return nil }
 func (m *mockDBConn) Prepare(query string) (*sql.Stmt, error) {
 	return nil, errors.New("not implemented")
 }
@@ -211,7 +211,7 @@ func (d *driverConnStub) Begin() (driver.Tx, error) {
 //   Заглушка с памятью  //
 // --------------------- //
 //
-// Здесь мы реализуем интерфейс StorDB в виде in-memory хранилища, 
+// Здесь мы реализуем интерфейс StorDB в виде in-memory хранилища,
 // чтобы протестировать именно логику GetOneValue, GetArrayValues, List.
 
 type mockDBConnMemory struct {
@@ -221,7 +221,7 @@ type mockDBConnMemory struct {
 
 var _ StorDB = (*mockDBConnMemory)(nil)
 
-func (m *mockDBConnMemory) Begin() (*sql.Tx, error)                                    { return nil, errors.New("not implemented") }
+func (m *mockDBConnMemory) Begin() (*sql.Tx, error) { return nil, errors.New("not implemented") }
 func (m *mockDBConnMemory) BeginTx(ctx context.Context, opts *sql.TxOptions) (*sql.Tx, error) {
 	return nil, errors.New("not implemented")
 }
@@ -241,7 +241,7 @@ func (m *mockDBConnMemory) Ping() error { return nil }
 func (m *mockDBConnMemory) PingContext(ctx context.Context) error {
 	return nil
 }
-func (m *mockDBConnMemory) PingDB() error                     { return nil }
+func (m *mockDBConnMemory) PingDB() error { return nil }
 func (m *mockDBConnMemory) Prepare(query string) (*sql.Stmt, error) {
 	return nil, errors.New("not implemented")
 }
@@ -410,4 +410,3 @@ func TestDB_List_Stub(t *testing.T) {
 	assert.Equal(t, []float64{1, 2}, arrMap["PollCount"])
 	assert.Equal(t, []float64{10, 20}, arrMap["HeapList"])
 }
-

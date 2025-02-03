@@ -9,6 +9,7 @@ import (
 	"io"
 	"net/http"
 	"strings"
+	"sync"
 
 	"github.com/Grifonhard/Practicum-metrics/internal/drivers/psql"
 	"github.com/Grifonhard/Practicum-metrics/internal/logger"
@@ -26,7 +27,8 @@ const (
 
 // Update обновление данных о хранимых метриках
 // приспособлено для принятия одиночных метрик
-func Update(stor *storage.MemStorage) gin.HandlerFunc {
+func Update(wg *sync.WaitGroup, stor *storage.MemStorage) gin.HandlerFunc {
+	defer wg.Done()
 	return func(c *gin.Context) {
 		mType, ok := c.Get(METRICTYPE)
 		if !ok {
@@ -102,7 +104,8 @@ func Update(stor *storage.MemStorage) gin.HandlerFunc {
 
 // Updates  обновление данных о хранимых метриках
 // приспособлено для принятия агрегированных данных о метриках
-func Updates(stor *storage.MemStorage) gin.HandlerFunc {
+func Updates(wg *sync.WaitGroup, stor *storage.MemStorage) gin.HandlerFunc {
+	defer wg.Done()
 	return func(c *gin.Context) {
 		var buf bytes.Buffer
 		c.Header("Content-Type", "application/json; charset=utf-8")

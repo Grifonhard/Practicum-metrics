@@ -3,116 +3,93 @@
 package main
 
 import (
-	"flag"
 	"fmt"
 	"log"
 	"os"
+	"os/signal"
+	"sync"
+	"syscall"
 
+	"github.com/Grifonhard/Practicum-metrics/internal/cfg"
+	cryptoutils "github.com/Grifonhard/Practicum-metrics/internal/crypto_utils"
 	"github.com/Grifonhard/Practicum-metrics/internal/drivers/psql"
 	"github.com/Grifonhard/Practicum-metrics/internal/logger"
 	"github.com/Grifonhard/Practicum-metrics/internal/storage"
 	web "github.com/Grifonhard/Practicum-metrics/internal/web_server"
-	"github.com/caarlos0/env/v10"
 	"github.com/gin-gonic/gin"
 )
 
-var buildVersion string
-var buildDate string
-var buildCommit string
-
-const (
-	DEFAULTADDR          = "localhost:8080"
-	DEFAULTSTOREINTERVAL = 300
-	DEFAULTRESTORE       = true
-	NA = "N/A"
+var (
+	buildVersion = "NA"
+	buildDate    = "NA"
+	buildCommit  = "NA"
 )
 
-type CFG struct {
-	Addr            *string `env:"ADDRESS"`
-	StoreInterval   *int    `env:"STORE_INTERVAL"`
-	FileStoragePath *string `env:"FILE_STORAGE_PATH"`
-	Restore         *bool   `env:"RESTORE"`
-	DatabaseDsn     *string `env:"DATABASE_DSN"`
-	Key             *string `env:"KEY"`
-}
-
 func main() {
-	addr := flag.String("a", DEFAULTADDR, "server address")
-	storeInterval := flag.Int("i", DEFAULTSTOREINTERVAL, "backup interval")
-	fileStoragePath := flag.String("f", "", "file storage path")
-	restore := flag.Bool("r", DEFAULTRESTORE, "restore from backup")
-	databaseDsn := flag.String("d", "", "database connect")
-	key := flag.String("k", "", "ключ для хэша")
-
-	flag.Parse()
-
-	var cfg CFG
-	err := env.Parse(&cfg)
+	err := logger.Init(os.Stdout, 4)
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	if cfg.Addr != nil {
-		addr = cfg.Addr
+	var cfg cfg.Server
+	err = cfg.Load()
+	if err != nil {
+		log.Fatal(err)
 	}
-	if cfg.StoreInterval != nil {
-		storeInterval = cfg.StoreInterval
-	}
-	if cfg.FileStoragePath != nil {
-		fileStoragePath = cfg.FileStoragePath
-	}
-	if cfg.Restore != nil {
-		restore = cfg.Restore
-	}
-	if cfg.DatabaseDsn != nil {
-		databaseDsn = cfg.DatabaseDsn
-	}
-	if cfg.Key != nil {
-		key = cfg.Key
+
+	if *cfg.CryptoKey != "" {
+		cryptoutils.PrivateKey, err = cryptoutils.LoadPrivateKey(*cfg.CryptoKey)
+		if err != nil {
+			log.Fatal(err)
+		}
+		logger.Info("private key successfully loaded")
 	}
 
 	showMeta()
 
-	err = logger.Init(os.Stdout, 4)
-	if err != nil {
-		log.Fatal(err)
-	}
-
 	var dbInter psql.StorDB
 	var db *psql.DB
-	if *databaseDsn != "" {
-		logger.Info(fmt.Sprintf("Database DSN: %s\n", *databaseDsn))
-		db, err = psql.ConnectDB(*databaseDsn)
+	if *cfg.DatabaseDsn != "" {
+		logger.Info(fmt.Sprintf("Database DSN: %s\n", *cfg.DatabaseDsn))
+		db, err = psql.ConnectDB(*cfg.DatabaseDsn)
 		if err != nil {
-			log.Fatal(err)
-		}
-		if pingErr := db.Ping(); pingErr != nil {
-			_ = db.Close()
 			log.Fatal(err)
 		}
 		dbInter = db
 	}
 
-	stor, err := storage.New(*storeInterval, *fileStoragePath, *restore, dbInter)
+	stor, err := storage.New(*cfg.StoreInterval, *cfg.FileStoragePath, *cfg.Restore, dbInter)
 	if err != nil {
 		log.Fatal(err)
 	}
 
 	go stor.BackupLoop()
 
-	r := initRouter(stor, db, *key)
+	// graceful shutdown
+	sig := make(chan os.Signal, 1)
+	signal.Notify(sig, syscall.SIGQUIT, syscall.SIGTERM, syscall.SIGINT)
+	var wg sync.WaitGroup
 
-	logger.Info(fmt.Sprintf("Server start %s\n", *addr))
-	log.Fatal(r.Run(*addr))
+	r := initRouter(&wg, stor, db, *cfg.Key)
+	
+	logger.Info(fmt.Sprintf("Server start %s\n", *cfg.Addr))
+
+	go func (){
+		log.Fatal(r.Run(*cfg.Addr))
+	}()
+	
+	<-sig
+	wg.Wait()
+	logger.Info("server shutdown")
 }
 
-func initRouter(stor *storage.MemStorage, db *psql.DB, key string) *gin.Engine {
+func initRouter(wg *sync.WaitGroup, stor *storage.MemStorage, db *psql.DB, key string) *gin.Engine {
 	router := gin.Default()
-	router.LoadHTMLGlob("../../templates/*")
+	router.LoadHTMLGlob("./templates/*")
 
-	router.POST("/update/", web.ReqRespLogger(""), web.DataExtraction(), web.RespEncode(), web.Update(stor))
-	router.POST("/update/:type/:name/:value", web.ReqRespLogger(""), web.DataExtraction(), web.Update(stor))
-	router.POST("/updates/", web.PseudoAuth(key), web.ReqRespLogger(key), web.DataExtraction(), web.Updates(stor))
+	router.POST("/update/", web.WGadd(wg), web.ReqRespLogger(""), web.DataExtraction(), web.RespEncode(), web.Update(wg, stor))
+	router.POST("/update/:type/:name/:value", web.WGadd(wg), web.ReqRespLogger(""), web.DataExtraction(), web.Update(wg, stor))
+	router.POST("/updates/", web.WGadd(wg), web.PseudoAuth(key), cryptoutils.DecryptBody(), web.ReqRespLogger(key), web.DataExtraction(), web.Updates(wg, stor))
 	router.GET("/value/:type/:name", web.ReqRespLogger(""), web.DataExtraction(), web.Get(stor))
 	router.POST("/value/", web.ReqRespLogger(""), web.RespEncode(), web.GetJSON(stor))
 	router.GET("/", web.ReqRespLogger(""), web.RespEncode(), web.List(stor))
@@ -124,19 +101,7 @@ func initRouter(stor *storage.MemStorage, db *psql.DB, key string) *gin.Engine {
 }
 
 func showMeta() {
-	if buildVersion == "" {
-		fmt.Printf("Build version: %s\n", NA)
-	} else {
-		fmt.Printf("Build version: %s\n", buildVersion)
-	}
-	if buildCommit == "" {
-		fmt.Printf("Build commit: %s\n", NA)
-	} else {
-		fmt.Printf("Build commit: %s\n", buildCommit)
-	}
-	if buildDate == "" {
-		fmt.Printf("Build date: %s\n", NA)
-	} else {
-		fmt.Printf("Build date: %s\n", buildDate)
-	}
+	fmt.Printf("Build version: %s\n", buildVersion)
+	fmt.Printf("Build commit: %s\n", buildCommit)
+	fmt.Printf("Build date: %s\n", buildDate)
 }

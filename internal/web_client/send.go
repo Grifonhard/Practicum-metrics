@@ -1,4 +1,4 @@
-// Модуль используется для передачи данных из агента на сервер хранения метрик 
+// Модуль используется для передачи данных из агента на сервер хранения метрик
 package webclient
 
 import (
@@ -15,6 +15,7 @@ import (
 	"sync"
 	"time"
 
+	cryptoutils "github.com/Grifonhard/Practicum-metrics/internal/crypto_utils"
 	"github.com/Grifonhard/Practicum-metrics/internal/logger"
 	metgen "github.com/Grifonhard/Practicum-metrics/internal/met_gen"
 	"github.com/Grifonhard/Practicum-metrics/internal/storage"
@@ -41,7 +42,9 @@ const (
 )
 
 // SendMetric агрегирует и отправляет данные на сервер
-func SendMetric(url string, gen *metgen.MetGen, keyHash, sendMethod string) {
+func SendMetric(wg *sync.WaitGroup, url string, gen *metgen.MetGen, keyHash, sendMethod string) {
+	wg.Add(1)
+	defer wg.Done()
 	ctx, cancel := context.WithCancel(context.Background())
 	ch := make(chan *Metrics)
 
@@ -83,8 +86,21 @@ func SendMetric(url string, gen *metgen.MetGen, keyHash, sendMethod string) {
 				cancel()
 				return
 			}
+			// шифрование, если есть ключ
+			var finalBody *bytes.Buffer
+			if cryptoutils.PublicKey != nil {
+				encrypted, err := cryptoutils.EncryptRSA(compressed.Bytes(), cryptoutils.PublicKey)
+				if err != nil {
+					logger.Error("error encrypting data: ", err)
+					return
+				}
+				requestBody := []byte(fmt.Sprintf(`{"data":"%s"}`, encrypted))
+				finalBody = bytes.NewBuffer(requestBody)
+			} else {
+				finalBody = compressed
+			}
 			//подготовка реквеста и клиента
-			req, err := http.NewRequest(http.MethodPost, url, compressed)
+			req, err := http.NewRequest(http.MethodPost, url, finalBody)
 			if err != nil {
 				logger.Error(fmt.Sprintf("fail while create request: %s", err.Error()))
 				cancel()
@@ -186,7 +202,9 @@ func computeHMAC(value, key string) string {
 }
 
 // SendMetricWithWorkerPool асинхронная подготовка и отправка метрик
-func SendMetricWithWorkerPool(url string, gen *metgen.MetGen, keyHash string, rateLimit int) {
+func SendMetricWithWorkerPool(wgSig *sync.WaitGroup, url string, gen *metgen.MetGen, keyHash string, rateLimit int) {
+	wgSig.Add(1)
+	defer wgSig.Done()
 	collectG := make(chan metgen.OneMetric)
 	collectC := make(chan metgen.OneMetric)
 	workerChan := make(chan Metrics)
@@ -263,8 +281,21 @@ func sendWorker(ctx context.Context, wg *sync.WaitGroup, url, keyHash string, in
 				errChan <- err
 				return
 			}
+			// шифрование, если есть ключ
+			var finalBody *bytes.Buffer
+			if cryptoutils.PublicKey != nil {
+				encrypted, err := cryptoutils.EncryptRSA(compressed.Bytes(), cryptoutils.PublicKey)
+				if err != nil {
+					logger.Error("error encrypting data: ", err)
+					return
+				}
+				requestBody := []byte(fmt.Sprintf(`{"data":"%s"}`, encrypted))
+				finalBody = bytes.NewBuffer(requestBody)
+			} else {
+				finalBody = compressed
+			}
 			//подготовка реквеста и клиента
-			req, err := http.NewRequest(http.MethodPost, url, compressed)
+			req, err := http.NewRequest(http.MethodPost, url, finalBody)
 			if err != nil {
 				errChan <- err
 				return

@@ -1,81 +1,59 @@
 package main
 
 import (
-	"flag"
+	"context"
 	"fmt"
 	"log"
 	"os"
+	"os/signal"
+	"sync"
+	"syscall"
 	"time"
 
+	"github.com/Grifonhard/Practicum-metrics/internal/cfg"
+	cryptoutils "github.com/Grifonhard/Practicum-metrics/internal/crypto_utils"
 	"github.com/Grifonhard/Practicum-metrics/internal/logger"
 	metgen "github.com/Grifonhard/Practicum-metrics/internal/met_gen"
 	webclient "github.com/Grifonhard/Practicum-metrics/internal/web_client"
-	"github.com/caarlos0/env/v10"
 )
 
 var (
 	buildVersion = "NA"
-	buildDate = "NA"
-    buildCommit = "NA"
+	buildDate    = "NA"
+	buildCommit  = "NA"
 )
-
-const (
-	DEFAULTADDR           = "localhost:8080"
-	DEFAULTREPORTINTERVAL = 10
-	DEFAULTPOLLINTERVAL   = 2
-	NA = "N/A"
-)
-
-type CFG struct {
-	Addr           *string `env:"ADDRESS"`
-	ReportInterval *int    `env:"REPORT_INTERVAL"`
-	PollInterval   *int    `env:"POLL_INTERVAL"`
-	Key            *string `env:"KEY"`
-	RateLimit      *int    `env:"RATE_LIMIT"`
-}
 
 func main() {
-	address := flag.String("a", DEFAULTADDR, "адрес сервера")
-	reportInterval := flag.Int("r", DEFAULTREPORTINTERVAL, "секунд частота отправки метрик")
-	pollInterval := flag.Int("p", DEFAULTPOLLINTERVAL, "секунд частота опроса метрик")
-	key := flag.String("k", "", "ключ для хэша")
-	rateLimit := flag.Int("l", 0, "ограничение количества одновременно исходящих запросов")
-
-	flag.Parse()
-
-	var cfg CFG
-	err := env.Parse(&cfg)
+	err := logger.Init(os.Stdout, 4)
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	if cfg.Addr != nil {
-		address = cfg.Addr
+	var cfg cfg.Agent
+	err = cfg.Load()
+	if err != nil {
+		log.Fatal(err)
 	}
-	if cfg.PollInterval != nil {
-		pollInterval = cfg.PollInterval
-	}
-	if cfg.ReportInterval != nil {
-		reportInterval = cfg.ReportInterval
-	}
-	if cfg.Key != nil {
-		key = cfg.Key
-	}
-	if cfg.RateLimit != nil {
-		rateLimit = cfg.RateLimit
+	
+	if *cfg.CryptoKey != "" {
+		cryptoutils.PublicKey, err = cryptoutils.LoadPublicKey(*cfg.CryptoKey)
+		if err != nil {
+			log.Fatal(err)
+		}
+		logger.Info("public key successfully loaded")
 	}
 
 	generator := metgen.New()
 
-	timerPoll := time.NewTicker(time.Duration(*pollInterval) * time.Second)
-	timerReport := time.NewTicker(time.Duration(*reportInterval) * time.Second)
-
-	err = logger.Init(os.Stdout, 4)
-	if err != nil {
-		log.Fatal(err)
-	}
+	timerPoll := time.NewTicker(time.Duration(*cfg.PollInterval) * time.Second)
+	defer timerPoll.Stop()
+	timerReport := time.NewTicker(time.Duration(*cfg.ReportInterval) * time.Second)
+	defer timerReport.Stop()
 
 	showMeta()
+
+	ctx, _ := signal.NotifyContext(context.Background(), syscall.SIGQUIT, syscall.SIGTERM, syscall.SIGINT)
+	var wg sync.WaitGroup
 
 	for {
 		select {
@@ -85,11 +63,15 @@ func main() {
 				logger.Error(fmt.Sprintf("Fail renew metrics: %s\n", err.Error()))
 			}
 		case <-timerReport.C:
-			if *rateLimit == 0 {
-				go webclient.SendMetric(fmt.Sprintf("http://%s/updates/", *address), generator, *key, webclient.SENDARRAY)
+			if *cfg.RateLimit == 0 {
+				go webclient.SendMetric(&wg, fmt.Sprintf("http://%s/updates/", *cfg.Addr), generator, *cfg.Key, webclient.SENDARRAY)
 			} else {
-				go webclient.SendMetricWithWorkerPool(fmt.Sprintf("http://%s/updates/", *address), generator, *key, *rateLimit)
+				go webclient.SendMetricWithWorkerPool(&wg, fmt.Sprintf("http://%s/updates/", *cfg.Addr), generator, *cfg.Key, *cfg.RateLimit)
 			}
+		case <- ctx.Done():
+			wg.Wait()
+			logger.Info("agent shut down")
+			return
 		}
 	}
 }
