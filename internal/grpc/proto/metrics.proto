@@ -1,0 +1,49 @@
+syntax = "proto3";
+
+package metrics;
+
+option go_package = "internal/grpc/proto;metrics";
+
+import "google/protobuf/empty.proto";
+
+
+service MetricsService {
+  // Принимаем метрики по одной в формате стрима (Client Streaming)
+  rpc PushStream (stream Metric) returns (PushResponse);
+  // Принимает массив метрик (Bulk-push)
+  rpc PushBulk (PushBulkRequest) returns (PushResponse);
+  // Получение значения метрики по типу и имени
+  rpc Get (GetRequest) returns (GetResponse);
+  // Получение списка метрик (список строк)
+  rpc List (google.protobuf.Empty) returns (ListResponse);
+  // "Проверка связи" (Ping)
+  rpc PingDB (google.protobuf.Empty) returns (google.protobuf.Empty);
+}
+
+message Metric {
+  string type = 1;   // Type (ex: "counter", "gauge", etc.)
+  string name = 2;   // Имя метрики
+  double value = 3;  // Значение
+}
+
+message PushBulkRequest {
+  repeated Metric metrics = 1;
+}
+
+message PushResponse {
+  bool success = 1;
+  string message = 2;
+}
+
+message GetRequest {
+  string type = 1;
+  string name = 2;
+}
+
+message GetResponse {
+  double value = 1;
+}
+
+message ListResponse {
+  repeated string metrics = 1;
+}

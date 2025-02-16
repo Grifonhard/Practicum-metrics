@@ -186,10 +186,6 @@ func DataExtraction() gin.HandlerFunc {
 			}
 		}
 
-		if strings.Contains(c.Request.URL.Path, "/updates/") {
-			c.Next()
-		}
-
 		if c.Request.Method == http.MethodPost && strings.Contains(c.Request.URL.Path, "/update/") && strings.Contains(c.Request.Header.Get("Content-Type"), "application/json") {
 			c.Set(METRICTYPE, METRICTYPEJSON)
 
