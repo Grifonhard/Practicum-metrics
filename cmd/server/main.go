@@ -5,6 +5,7 @@ package main
 import (
 	"fmt"
 	"log"
+	"net"
 	"os"
 	"os/signal"
 	"sync"
@@ -45,6 +46,15 @@ func main() {
 		logger.Info("private key successfully loaded")
 	}
 
+	var ipNet *net.IPNet
+	if *cfg.TrustedSubnet != "" {
+		_, ipNet, err = net.ParseCIDR(*cfg.TrustedSubnet)
+		if err != nil {
+			log.Fatalf("Ошибка парсинга trusted_subnet (%s): %v", cfg.TrustedSubnet, err)
+		}
+		log.Printf("Загруженная доверенная подсеть: %s", cfg.TrustedSubnet)
+	}
+
 	showMeta()
 
 	var dbInter psql.StorDB
@@ -70,7 +80,7 @@ func main() {
 	signal.Notify(sig, syscall.SIGQUIT, syscall.SIGTERM, syscall.SIGINT)
 	var wg sync.WaitGroup
 
-	r := initRouter(&wg, stor, db, *cfg.Key)
+	r := initRouter(&wg, stor, db, *cfg.Key, ipNet)
 	
 	logger.Info(fmt.Sprintf("Server start %s\n", *cfg.Addr))
 
@@ -83,16 +93,16 @@ func main() {
 	logger.Info("server shutdown")
 }
 
-func initRouter(wg *sync.WaitGroup, stor *storage.MemStorage, db *psql.DB, key string) *gin.Engine {
+func initRouter(wg *sync.WaitGroup, stor *storage.MemStorage, db *psql.DB, key string, ipNet *net.IPNet) *gin.Engine {
 	router := gin.Default()
 	router.LoadHTMLGlob("./templates/*")
 
-	router.POST("/update/", web.WGadd(wg), web.ReqRespLogger(""), web.DataExtraction(), web.RespEncode(), web.Update(wg, stor))
-	router.POST("/update/:type/:name/:value", web.WGadd(wg), web.ReqRespLogger(""), web.DataExtraction(), web.Update(wg, stor))
-	router.POST("/updates/", web.WGadd(wg), web.PseudoAuth(key), cryptoutils.DecryptBody(), web.ReqRespLogger(key), web.DataExtraction(), web.Updates(wg, stor))
-	router.GET("/value/:type/:name", web.ReqRespLogger(""), web.DataExtraction(), web.Get(stor))
-	router.POST("/value/", web.ReqRespLogger(""), web.RespEncode(), web.GetJSON(stor))
-	router.GET("/", web.ReqRespLogger(""), web.RespEncode(), web.List(stor))
+	router.POST("/update/", web.WGadd(wg), web.ReqRespLogTScheck("", ipNet), web.DataExtraction(), web.RespEncode(), web.Update(wg, stor))
+	router.POST("/update/:type/:name/:value", web.WGadd(wg), web.ReqRespLogTScheck("", ipNet), web.DataExtraction(), web.Update(wg, stor))
+	router.POST("/updates/", web.WGadd(wg), web.PseudoAuth(key), cryptoutils.DecryptBody(), web.ReqRespLogTScheck(key, ipNet), web.DataExtraction(), web.Updates(wg, stor))
+	router.GET("/value/:type/:name", web.ReqRespLogTScheck("", ipNet), web.DataExtraction(), web.Get(stor))
+	router.POST("/value/", web.ReqRespLogTScheck("", ipNet), web.RespEncode(), web.GetJSON(stor))
+	router.GET("/", web.ReqRespLogTScheck("", ipNet), web.RespEncode(), web.List(stor))
 	if db != nil {
 		router.GET("/ping", web.PingDB(db))
 	}

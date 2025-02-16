@@ -110,7 +110,7 @@ func TestGetJSON(t *testing.T) {
 
 	router := gin.Default()
 
-	router.POST("/value/", ReqRespLogger(""), GetJSON(stor))
+	router.POST("/value/", ReqRespLogTScheck("", nil), GetJSON(stor))
 
 	buf := bytes.NewBuffer([]byte(`{"id":"testgauge","type":"gauge"}`))
 

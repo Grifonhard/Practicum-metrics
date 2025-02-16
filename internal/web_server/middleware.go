@@ -8,6 +8,7 @@ import (
 	"encoding/hex"
 	"fmt"
 	"io"
+	"net"
 	"net/http"
 	"strings"
 	"sync"
@@ -51,8 +52,27 @@ func (lw *loggingResponseWriter) WriteHeader(statusCode int) {
 }
 
 // ReqRespLogger логгирует реквесты и респонсы
-func ReqRespLogger(key string) gin.HandlerFunc {
+// также проверяет заголовок trusted subnet
+func ReqRespLogTScheck(key string, trSubnet *net.IPNet) gin.HandlerFunc {
 	return func(c *gin.Context) {
+
+		if trSubnet != nil {
+			// Считываем заголовок X-Real-IP
+			xRealIP := c.GetHeader("X-Real-IP")
+
+			agentIP := net.ParseIP(xRealIP)
+			if agentIP == nil {
+				c.AbortWithStatus(http.StatusForbidden)
+				return
+			}
+
+			// Если IP не входит в доверенную подсеть — возвращаем 403
+			if !trSubnet.Contains(agentIP) {
+				c.AbortWithStatus(http.StatusForbidden)
+				return
+			}
+		}
+
 		start := time.Now()
 
 		respInfo := &respInfo{}
