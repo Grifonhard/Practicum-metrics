@@ -153,7 +153,7 @@ func TestSendMetric(t *testing.T) {
 	var wg sync.WaitGroup
 
 	// Вызов функции SendMetric с тестовым сервером и реальными метриками
-	SendMetric(&wg, ts.URL, realMetGen, "", SENDSUBSEQUENCE)
+	SendMetric(&wg, ts.URL, realMetGen, "", SENDSUBSEQUENCE, "")
 
 	// Проверяем, что запрос был получен
 	require.NotNil(t, receivedRequest, "Сервер не получил запрос")
