@@ -11,14 +11,14 @@ import (
 )
 
 // UnaryInterceptor для вейтгруппы и проверки real ip
-func (ms *MetricsServer) UnaryInterceptor(
+func (s *MetricsServer) UnaryInterceptor(
 	ctx context.Context,
 	req interface{},
 	info *grpc.UnaryServerInfo,
 	handler grpc.UnaryHandler,
 ) (interface{}, error) {
 	// вейтгруппа
-	ms.WG.Add(1)
+	s.WG.Add(1)
 
 	// проверка Real IP
 	md, ok := metadata.FromIncomingContext(ctx)
@@ -26,7 +26,7 @@ func (ms *MetricsServer) UnaryInterceptor(
 		return nil, status.Error(codes.InvalidArgument, "missing metadata in stream")
 	}
 
-	if ms.TrS != nil {
+	if s.TrS != nil {
 		realIP := md["X-Real-IP"]
 
 		if len(realIP) == 0 {
@@ -38,7 +38,7 @@ func (ms *MetricsServer) UnaryInterceptor(
 			return nil, status.Error(codes.PermissionDenied, "missing real ip in metadata")
 		}
 
-		if !ms.TrS.Contains(agentIP) {
+		if !s.TrS.Contains(agentIP) {
 			return nil, status.Error(codes.PermissionDenied, "bad trusted subnet")
 		}
 	}
@@ -47,14 +47,14 @@ func (ms *MetricsServer) UnaryInterceptor(
 }
 
 // streamAuthInterceptor проверяет аутентификацию в метаданных streaming-запроса.
-func (ms *MetricsServer) StreamAuthInterceptor(
+func (s *MetricsServer) StreamAuthInterceptor(
 	srv interface{},
 	ss grpc.ServerStream,
 	info *grpc.StreamServerInfo,
 	handler grpc.StreamHandler,
 ) error {
 	// вейтгруппа
-	ms.WG.Add(1)
+	s.WG.Add(1)
 
 	// проверка Real IP
 	md, ok := metadata.FromIncomingContext(ss.Context())
@@ -62,7 +62,7 @@ func (ms *MetricsServer) StreamAuthInterceptor(
 		return status.Error(codes.InvalidArgument, "missing metadata in stream")
 	}
 
-	if ms.TrS != nil {
+	if s.TrS != nil {
 		realIP := md["X-Real-IP"]
 
 		if len(realIP) == 0 {
@@ -74,7 +74,7 @@ func (ms *MetricsServer) StreamAuthInterceptor(
 			return status.Error(codes.PermissionDenied, "missing real ip in metadata")
 		}
 
-		if !ms.TrS.Contains(agentIP) {
+		if !s.TrS.Contains(agentIP) {
 			return status.Error(codes.PermissionDenied, "bad trusted subnet")
 		}
 	}

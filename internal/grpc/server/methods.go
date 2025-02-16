@@ -76,7 +76,7 @@ func (s *MetricsServer) PushBulk(ctx context.Context, in *pb.PushBulkRequest) (*
 		if err != nil {
 			return &pb.PushResponse{
 				Success: false,
-				Message: fmt.Sprintf("fail"),
+				Message: "fail",
 			}, status.Errorf(codes.Internal, "stream recv error: %v", err)
 		}
 	}

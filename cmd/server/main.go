@@ -53,9 +53,9 @@ func main() {
 	if *cfg.TrustedSubnet != "" {
 		_, ipNet, err = net.ParseCIDR(*cfg.TrustedSubnet)
 		if err != nil {
-			log.Fatalf("Ошибка парсинга trusted_subnet (%s): %v", cfg.TrustedSubnet, err)
+			log.Fatalf("Ошибка парсинга trusted_subnet (%s): %v", *cfg.TrustedSubnet, err)
 		}
-		log.Printf("Загруженная доверенная подсеть: %s", cfg.TrustedSubnet)
+		log.Printf("Загруженная доверенная подсеть: %s", *cfg.TrustedSubnet)
 	}
 
 	showMeta()

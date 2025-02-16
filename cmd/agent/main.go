@@ -74,12 +74,12 @@ func main() {
 			if time.Now().UnixNano()%2 == 0 {
 				err = grpcAgent.PushBulk()
 				if err != nil {
-					logger.Error("faul push bulk: %s", err.Error())
+					logger.Error(fmt.Sprintf("fail push bulk: %s", err.Error()))
 				}
 			} else {
 				err = grpcAgent.PushStream()
 				if err != nil {
-					logger.Error("faul push stream: %s", err.Error())
+					logger.Error(fmt.Sprintf("fail push stream: %s", err.Error()))
 				}
 			}
 		case <-ctx.Done():

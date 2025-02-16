@@ -147,7 +147,7 @@ func (a *Agent) PushStream() error {
 				return err
 			}
 
-			logger.Info("grpc stream success %t message: %s", pushStreamResp.Success, pushStreamResp.Message)
+			logger.Info(fmt.Sprintf("grpc stream success %t message: %s", pushStreamResp.Success, pushStreamResp.Message))
 
 			return nil
 		}
