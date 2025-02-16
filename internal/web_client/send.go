@@ -42,7 +42,7 @@ const (
 )
 
 // SendMetric агрегирует и отправляет данные на сервер
-func SendMetric(wg *sync.WaitGroup, url string, gen *metgen.MetGen, keyHash, sendMethod string) {
+func SendMetric(wg *sync.WaitGroup, url string, gen *metgen.MetGen, keyHash, sendMethod string, realIp string) {
 	wg.Add(1)
 	defer wg.Done()
 	ctx, cancel := context.WithCancel(context.Background())
@@ -109,6 +109,9 @@ func SendMetric(wg *sync.WaitGroup, url string, gen *metgen.MetGen, keyHash, sen
 			if keyHash != "" {
 				hmacHash := computeHMAC(compressed.String(), keyHash)
 				req.Header.Set("HashSHA256", hmacHash)
+			}
+			if realIp != "" {
+				req.Header.Set("X-Real-IP", realIp)
 			}
 			req.Header.Set("Content-Type", "application/json")
 			req.Header.Set("Content-Encoding", "gzip")
@@ -202,7 +205,7 @@ func computeHMAC(value, key string) string {
 }
 
 // SendMetricWithWorkerPool асинхронная подготовка и отправка метрик
-func SendMetricWithWorkerPool(wgSig *sync.WaitGroup, url string, gen *metgen.MetGen, keyHash string, rateLimit int) {
+func SendMetricWithWorkerPool(wgSig *sync.WaitGroup, url string, gen *metgen.MetGen, keyHash string, rateLimit int, realIp string) {
 	wgSig.Add(1)
 	defer wgSig.Done()
 	collectG := make(chan metgen.OneMetric)
@@ -215,7 +218,7 @@ func SendMetricWithWorkerPool(wgSig *sync.WaitGroup, url string, gen *metgen.Met
 	// запускаем пул воркеров
 	for i := 0; i < rateLimit; i++ {
 		wg.Add(1)
-		go sendWorker(ctx, &wg, url, keyHash, workerChan, errChan)
+		go sendWorker(ctx, &wg, url, keyHash, workerChan, errChan, realIp)
 	}
 
 	// запуск генераторов
@@ -257,7 +260,7 @@ func SendMetricWithWorkerPool(wgSig *sync.WaitGroup, url string, gen *metgen.Met
 
 // sendWorker отправка данных на сервер
 // предназначена для работы как отдельная горутина
-func sendWorker(ctx context.Context, wg *sync.WaitGroup, url, keyHash string, input chan Metrics, errChan chan error) {
+func sendWorker(ctx context.Context, wg *sync.WaitGroup, url, keyHash string, input chan Metrics, errChan chan error, realIp string) {
 	defer wg.Done()
 	//какого-то хрена заголовок Accept-Encoding gzip устанавливается автоматически в клиенте по умолчанию
 	cl := &http.Client{
@@ -303,6 +306,9 @@ func sendWorker(ctx context.Context, wg *sync.WaitGroup, url, keyHash string, in
 			if keyHash != "" {
 				hmacHash := computeHMAC(compressed.String(), keyHash)
 				req.Header.Set("HashSHA256", hmacHash)
+			}
+			if realIp != "" {
+				req.Header.Set("X-Real-IP", realIp)
 			}
 			req.Header.Set("Content-Type", "application/json")
 			req.Header.Set("Content-Encoding", "gzip")

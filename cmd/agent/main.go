@@ -64,9 +64,9 @@ func main() {
 			}
 		case <-timerReport.C:
 			if *cfg.RateLimit == 0 {
-				go webclient.SendMetric(&wg, fmt.Sprintf("http://%s/updates/", *cfg.Addr), generator, *cfg.Key, webclient.SENDARRAY)
+				go webclient.SendMetric(&wg, fmt.Sprintf("http://%s/updates/", *cfg.Addr), generator, *cfg.Key, webclient.SENDARRAY, *cfg.TrustedSubnet)
 			} else {
-				go webclient.SendMetricWithWorkerPool(&wg, fmt.Sprintf("http://%s/updates/", *cfg.Addr), generator, *cfg.Key, *cfg.RateLimit)
+				go webclient.SendMetricWithWorkerPool(&wg, fmt.Sprintf("http://%s/updates/", *cfg.Addr), generator, *cfg.Key, *cfg.RateLimit, *cfg.TrustedSubnet)
 			}
 		case <- ctx.Done():
 			wg.Wait()
