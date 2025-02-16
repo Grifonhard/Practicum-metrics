@@ -19,6 +19,7 @@ type Server struct {
 	DatabaseDsn     *string `env:"DATABASE_DSN"`
 	Key             *string `env:"KEY"`
 	CryptoKey       *string `env:"CRYPTO_KEY"`
+	TrustedSubnet   *string `env:"TRUSTED_SUBNET"`
 	Config          *string `env:"CONFIG"`
 }
 
@@ -30,6 +31,7 @@ type ServerFlags struct {
 	DatabaseDsn     *string
 	Key             *string
 	CryptoKey       *string
+	TrustedSubnet   *string
 	Config          *string
 }
 
@@ -41,6 +43,7 @@ type ServerFile struct {
 	DatabaseDSN   *string `json:"database_dsn"`
 	Key           *string `json:"key"`
 	CryptoKey     *string `json:"crypto_key"`
+	TrustedSubnet *string `json:"trusted_subnet"`
 }
 
 // Load загружает конфигурацию из разных источников
@@ -56,6 +59,7 @@ func (s *Server) Load() error {
 		DatabaseDsn     string `env:"DATABASE_DSN"`
 		Key             string `env:"KEY"`
 		CryptoKey       string `env:"CRYPTO_KEY"`
+		TrustedSubnet   string `env:"TRUSTED_SUBNET"`
 		Config          string `env:"CONFIG"`
 	}
 
@@ -73,6 +77,7 @@ func (s *Server) Load() error {
 	s.DatabaseDsn = &ser.DatabaseDsn
 	s.Key = &ser.Key
 	s.CryptoKey = &ser.CryptoKey
+	s.TrustedSubnet = &ser.TrustedSubnet
 	s.Config = &ser.Config
 
 	flags := &ServerFlags{}
@@ -156,6 +161,15 @@ func (s *Server) Resolve(flags *ServerFlags, file *ServerFile) error {
 		var cryptoKey string
 		s.CryptoKey = &cryptoKey
 	}
+	if s.TrustedSubnet != nil && *s.TrustedSubnet != "" {
+	} else if flags.TrustedSubnet != nil && *flags.TrustedSubnet != "" {
+		s.TrustedSubnet = flags.TrustedSubnet
+	} else if file.TrustedSubnet != nil {
+		s.TrustedSubnet = file.TrustedSubnet
+	} else {
+		var ts string
+		s.TrustedSubnet = &ts
+	}
 	return nil
 }
 
@@ -167,6 +181,7 @@ func (s *ServerFlags) loadConfigFromFlags() error {
 	s.DatabaseDsn = flag.String("d", "", "database connect")
 	s.Key = flag.String("k", "", "ключ для хэша")
 	s.CryptoKey = flag.String("crypto-key", "", "Path to RSA private key (for decryption)")
+	s.TrustedSubnet = flag.String("-t", "", "trusted subnet")
 	s.Config = flag.String("c", "", "path to json config")
 
 	flag.Parse()
@@ -198,6 +213,7 @@ func (s *ServerFile) loadConfigFromFile(pathEnv, pathFlag *string) error {
 		DatabaseDSN   *string `json:"database_dsn"`
 		Key           *string `json:"key"`
 		CryptoKey     *string `json:"crypto_key"`
+		TrustedSubnet *string `json:"trusted_subnet"`
 	}
 
 	var im interm
@@ -218,6 +234,7 @@ func (s *ServerFile) loadConfigFromFile(pathEnv, pathFlag *string) error {
 	s.DatabaseDSN = im.DatabaseDSN
 	s.Key = im.Key
 	s.CryptoKey = im.CryptoKey
+	s.TrustedSubnet = im.TrustedSubnet
 
 	return nil
 }
