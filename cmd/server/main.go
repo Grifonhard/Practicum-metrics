@@ -84,17 +84,17 @@ func main() {
 	var wg sync.WaitGroup
 
 	/*r := initRouter(&wg, stor, db, *cfg.Key, ipNet)
-	
+
 	logger.Info(fmt.Sprintf("Server start %s\n", *cfg.Addr))
 
 	go func (){
 		log.Fatal(r.Run(*cfg.Addr))
 	}()*/
 
-	go func(){
+	go func() {
 		initGRPC(&wg, ipNet, db, stor, *cfg.Addr)
 	}()
-	
+
 	<-sig
 	wg.Wait()
 	logger.Info("server shutdown")
@@ -126,20 +126,20 @@ func showMeta() {
 func initGRPC(wg *sync.WaitGroup, TrS *net.IPNet, db *psql.DB, stor *storage.MemStorage, addr string) {
 	serv := server.New(wg, TrS, db, stor)
 
-    srv := grpc.NewServer(
-        grpc.ChainUnaryInterceptor(serv.UnaryInterceptor),
-        grpc.ChainStreamInterceptor(serv.StreamAuthInterceptor),
-    )
-	
-    pb.RegisterMetricsServiceServer(srv, serv)
+	srv := grpc.NewServer(
+		grpc.ChainUnaryInterceptor(serv.UnaryInterceptor),
+		grpc.ChainStreamInterceptor(serv.StreamAuthInterceptor),
+	)
 
-    lis, err := net.Listen("tcp", addr)
-    if err != nil {
-        log.Fatalf("failed to listen: %v", err)
-    }
+	pb.RegisterMetricsServiceServer(srv, serv)
 
-    logger.Info("Starting gRPC server on :8080...")
-    if err := srv.Serve(lis); err != nil {
-        log.Fatalf("failed to serve: %v", err)
-    }
+	lis, err := net.Listen("tcp", addr)
+	if err != nil {
+		log.Fatalf("failed to listen: %v", err)
+	}
+
+	logger.Info("Starting gRPC server on :8080...")
+	if err := srv.Serve(lis); err != nil {
+		log.Fatalf("failed to serve: %v", err)
+	}
 }
