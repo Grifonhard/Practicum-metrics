@@ -12,9 +12,10 @@ import (
 
 	"github.com/Grifonhard/Practicum-metrics/internal/cfg"
 	cryptoutils "github.com/Grifonhard/Practicum-metrics/internal/crypto_utils"
+	"github.com/Grifonhard/Practicum-metrics/internal/grpc/agent"
 	"github.com/Grifonhard/Practicum-metrics/internal/logger"
 	metgen "github.com/Grifonhard/Practicum-metrics/internal/met_gen"
-	webclient "github.com/Grifonhard/Practicum-metrics/internal/web_client"
+	//webclient "github.com/Grifonhard/Practicum-metrics/internal/web_client"
 )
 
 var (
@@ -34,7 +35,7 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	
+
 	if *cfg.CryptoKey != "" {
 		cryptoutils.PublicKey, err = cryptoutils.LoadPublicKey(*cfg.CryptoKey)
 		if err != nil {
@@ -55,6 +56,8 @@ func main() {
 	ctx, _ := signal.NotifyContext(context.Background(), syscall.SIGQUIT, syscall.SIGTERM, syscall.SIGINT)
 	var wg sync.WaitGroup
 
+	grpcAgent := agent.New(*cfg.Addr, &wg, generator, *cfg.TrustedSubnet)
+
 	for {
 		select {
 		case <-timerPoll.C:
@@ -63,12 +66,23 @@ func main() {
 				logger.Error(fmt.Sprintf("Fail renew metrics: %s\n", err.Error()))
 			}
 		case <-timerReport.C:
-			if *cfg.RateLimit == 0 {
-				go webclient.SendMetric(&wg, fmt.Sprintf("http://%s/updates/", *cfg.Addr), generator, *cfg.Key, webclient.SENDARRAY)
+			/*if *cfg.RateLimit == 0 {
+				go webclient.SendMetric(&wg, fmt.Sprintf("http://%s/updates/", *cfg.Addr), generator, *cfg.Key, webclient.SENDARRAY, *cfg.TrustedSubnet)
 			} else {
-				go webclient.SendMetricWithWorkerPool(&wg, fmt.Sprintf("http://%s/updates/", *cfg.Addr), generator, *cfg.Key, *cfg.RateLimit)
+				go webclient.SendMetricWithWorkerPool(&wg, fmt.Sprintf("http://%s/updates/", *cfg.Addr), generator, *cfg.Key, *cfg.RateLimit, *cfg.TrustedSubnet)
+			}*/
+			if time.Now().UnixNano()%2 == 0 {
+				err = grpcAgent.PushBulk()
+				if err != nil {
+					logger.Error(fmt.Sprintf("fail push bulk: %s", err.Error()))
+				}
+			} else {
+				err = grpcAgent.PushStream()
+				if err != nil {
+					logger.Error(fmt.Sprintf("fail push stream: %s", err.Error()))
+				}
 			}
-		case <- ctx.Done():
+		case <-ctx.Done():
 			wg.Wait()
 			logger.Info("agent shut down")
 			return

@@ -42,7 +42,7 @@ const (
 )
 
 // SendMetric агрегирует и отправляет данные на сервер
-func SendMetric(wg *sync.WaitGroup, url string, gen *metgen.MetGen, keyHash, sendMethod string) {
+func SendMetric(wg *sync.WaitGroup, url string, gen *metgen.MetGen, keyHash, sendMethod string, realIP string) {
 	wg.Add(1)
 	defer wg.Done()
 	ctx, cancel := context.WithCancel(context.Background())
@@ -58,7 +58,7 @@ func SendMetric(wg *sync.WaitGroup, url string, gen *metgen.MetGen, keyHash, sen
 	// используется только для массива итемов /updates
 	var items []*Metrics
 
-	go prepareDataToSend(gauge, counter, ch, cancel)
+	go PrepareDataToSend(gauge, counter, ch, cancel)
 	for {
 		select {
 		case item := <-ch:
@@ -110,6 +110,9 @@ func SendMetric(wg *sync.WaitGroup, url string, gen *metgen.MetGen, keyHash, sen
 				hmacHash := computeHMAC(compressed.String(), keyHash)
 				req.Header.Set("HashSHA256", hmacHash)
 			}
+			if realIP != "" {
+				req.Header.Set("X-Real-IP", realIP)
+			}
 			req.Header.Set("Content-Type", "application/json")
 			req.Header.Set("Content-Encoding", "gzip")
 			//какого-то хрена заголовок Accept-Encoding gzip устанавливается автоматически в клиенте по умолчанию
@@ -146,7 +149,7 @@ func SendMetric(wg *sync.WaitGroup, url string, gen *metgen.MetGen, keyHash, sen
 
 // prepareDataToSend подготовка и отправка данных
 // приспособлена для асинхронной работы с функциями отправляющими данные
-func prepareDataToSend(g map[string]float64, c map[string]int64, ch chan *Metrics, cancel context.CancelFunc) {
+func PrepareDataToSend(g map[string]float64, c map[string]int64, ch chan *Metrics, cancel context.CancelFunc) {
 	wg := &sync.WaitGroup{}
 	wg.Add(2)
 	go func() {
@@ -202,7 +205,7 @@ func computeHMAC(value, key string) string {
 }
 
 // SendMetricWithWorkerPool асинхронная подготовка и отправка метрик
-func SendMetricWithWorkerPool(wgSig *sync.WaitGroup, url string, gen *metgen.MetGen, keyHash string, rateLimit int) {
+func SendMetricWithWorkerPool(wgSig *sync.WaitGroup, url string, gen *metgen.MetGen, keyHash string, rateLimit int, realIP string) {
 	wgSig.Add(1)
 	defer wgSig.Done()
 	collectG := make(chan metgen.OneMetric)
@@ -215,7 +218,7 @@ func SendMetricWithWorkerPool(wgSig *sync.WaitGroup, url string, gen *metgen.Met
 	// запускаем пул воркеров
 	for i := 0; i < rateLimit; i++ {
 		wg.Add(1)
-		go sendWorker(ctx, &wg, url, keyHash, workerChan, errChan)
+		go sendWorker(ctx, &wg, url, keyHash, workerChan, errChan, realIP)
 	}
 
 	// запуск генераторов
@@ -223,7 +226,7 @@ func SendMetricWithWorkerPool(wgSig *sync.WaitGroup, url string, gen *metgen.Met
 	go gen.CollectCounterToChan(ctx, collectC, errChan)
 
 	// собираем данные в канал для воркеров
-	go fanIn(ctx, collectG, collectC, workerChan)
+	go FanIn(ctx, collectG, collectC, workerChan)
 
 	// обработка ошибок
 	go func() {
@@ -257,7 +260,7 @@ func SendMetricWithWorkerPool(wgSig *sync.WaitGroup, url string, gen *metgen.Met
 
 // sendWorker отправка данных на сервер
 // предназначена для работы как отдельная горутина
-func sendWorker(ctx context.Context, wg *sync.WaitGroup, url, keyHash string, input chan Metrics, errChan chan error) {
+func sendWorker(ctx context.Context, wg *sync.WaitGroup, url, keyHash string, input chan Metrics, errChan chan error, realIP string) {
 	defer wg.Done()
 	//какого-то хрена заголовок Accept-Encoding gzip устанавливается автоматически в клиенте по умолчанию
 	cl := &http.Client{
@@ -304,6 +307,9 @@ func sendWorker(ctx context.Context, wg *sync.WaitGroup, url, keyHash string, in
 				hmacHash := computeHMAC(compressed.String(), keyHash)
 				req.Header.Set("HashSHA256", hmacHash)
 			}
+			if realIP != "" {
+				req.Header.Set("X-Real-IP", realIP)
+			}
 			req.Header.Set("Content-Type", "application/json")
 			req.Header.Set("Content-Encoding", "gzip")
 
@@ -333,7 +339,7 @@ func sendWorker(ctx context.Context, wg *sync.WaitGroup, url, keyHash string, in
 }
 
 // fanIn посредник между продюсерами метрик и воркерами для отправки метрик
-func fanIn(ctx context.Context, inputG, inputC chan metgen.OneMetric, output chan Metrics) {
+func FanIn(ctx context.Context, inputG, inputC chan metgen.OneMetric, output chan Metrics) {
 	defer close(output)
 	var closed [2]int
 	for {

@@ -8,6 +8,7 @@ import (
 	"encoding/hex"
 	"fmt"
 	"io"
+	"net"
 	"net/http"
 	"strings"
 	"sync"
@@ -36,7 +37,7 @@ type loggingResponseWriter struct {
 // Write записывает данные в ResponseWriter, считает хэш
 func (lw *loggingResponseWriter) Write(data []byte) (int, error) {
 	if lw.key != "" {
-		lw.respInfo.hash = computeHMAC(data, lw.key)
+		lw.respInfo.hash = ComputeHMAC(data, lw.key)
 	}
 	size, err := lw.ResponseWriter.Write(data)
 	lw.respInfo.size = size
@@ -51,8 +52,27 @@ func (lw *loggingResponseWriter) WriteHeader(statusCode int) {
 }
 
 // ReqRespLogger логгирует реквесты и респонсы
-func ReqRespLogger(key string) gin.HandlerFunc {
+// также проверяет заголовок trusted subnet
+func ReqRespLogTScheck(key string, trSubnet *net.IPNet) gin.HandlerFunc {
 	return func(c *gin.Context) {
+
+		if trSubnet != nil {
+			// Считываем заголовок X-Real-IP
+			xRealIP := c.GetHeader("X-Real-IP")
+
+			agentIP := net.ParseIP(xRealIP)
+			if agentIP == nil {
+				c.AbortWithStatus(http.StatusForbidden)
+				return
+			}
+
+			// Если IP не входит в доверенную подсеть — возвращаем 403
+			if !trSubnet.Contains(agentIP) {
+				c.AbortWithStatus(http.StatusForbidden)
+				return
+			}
+		}
+
 		start := time.Now()
 
 		respInfo := &respInfo{}
@@ -166,10 +186,6 @@ func DataExtraction() gin.HandlerFunc {
 			}
 		}
 
-		if strings.Contains(c.Request.URL.Path, "/updates/") {
-			c.Next()
-		}
-
 		if c.Request.Method == http.MethodPost && strings.Contains(c.Request.URL.Path, "/update/") && strings.Contains(c.Request.Header.Get("Content-Type"), "application/json") {
 			c.Set(METRICTYPE, METRICTYPEJSON)
 
@@ -227,7 +243,7 @@ func PseudoAuth(key string) gin.HandlerFunc {
 				return
 			}
 
-			expectedHash := computeHMAC(body, key)
+			expectedHash := ComputeHMAC(body, key)
 			if receivedHash != expectedHash {
 				c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid HMAC"})
 				c.Abort()
@@ -248,7 +264,7 @@ func WGadd(wg *sync.WaitGroup) gin.HandlerFunc {
 }
 
 // computeHMAC высчитывает хэш данных
-func computeHMAC(value []byte, key string) string {
+func ComputeHMAC(value []byte, key string) string {
 	h := hmac.New(sha256.New, []byte(key))
 	h.Write(value)
 	return hex.EncodeToString(h.Sum(nil))

@@ -18,6 +18,7 @@ type Agent struct {
 	Key            *string `env:"KEY"`
 	RateLimit      *int    `env:"RATE_LIMIT"`
 	CryptoKey      *string `env:"CRYPTO_KEY"`
+	TrustedSubnet  *string `env:"TRUSTED_SUBNET"`
 	Config         *string `env:"CONFIG"`
 }
 
@@ -28,6 +29,7 @@ type AgentFile struct {
 	CryptoKey      *string `json:"crypto_key"`
 	Key            *string `json:"key"`
 	RateLimit      *int    `json:"rate_limit"`
+	TrustedSubnet  *string `json:"trusted_subnet"`
 }
 
 type AgentFlags struct {
@@ -37,6 +39,7 @@ type AgentFlags struct {
 	CryptoKey      *string
 	Key            *string
 	RateLimit      *int
+	TrustedSubnet  *string
 	Config         *string
 }
 
@@ -52,6 +55,7 @@ func (a *Agent) Load() error {
 		Key            string `env:"KEY"`
 		RateLimit      int    `env:"RATE_LIMIT"`
 		CryptoKey      string `env:"CRYPTO_KEY"`
+		TrustedSubnet  string `env:"TRUSTED_SUBNET"`
 		Config         string `env:"CONFIG"`
 	}
 
@@ -68,6 +72,7 @@ func (a *Agent) Load() error {
 	a.Key = &a2.Key
 	a.RateLimit = &a2.RateLimit
 	a.CryptoKey = &a2.CryptoKey
+	a.TrustedSubnet = &a2.TrustedSubnet
 	a.Config = &a2.Config
 
 	flags := &AgentFlags{}
@@ -142,6 +147,15 @@ func (a *Agent) Resolve(flags *AgentFlags, file *AgentFile) error {
 		var cryptoKey string
 		a.CryptoKey = &cryptoKey
 	}
+	if a.TrustedSubnet != nil && *a.TrustedSubnet != "" {
+	} else if flags.TrustedSubnet != nil && *flags.TrustedSubnet != "" {
+		a.TrustedSubnet = flags.TrustedSubnet
+	} else if file.TrustedSubnet != nil {
+		a.TrustedSubnet = file.TrustedSubnet
+	} else {
+		var ts string
+		a.TrustedSubnet = &ts
+	}
 	return nil
 }
 
@@ -152,6 +166,7 @@ func (a *AgentFlags) loadConfigFromFlags() error {
 	a.Key = flag.String("k", "", "ключ для хэша")
 	a.RateLimit = flag.Int("l", 0, "ограничение количества одновременно исходящих запросов")
 	a.CryptoKey = flag.String("crypto-key", "", "path to RSA public key (for encryption)")
+	a.TrustedSubnet = flag.String("-t", "", "trusted subnet")
 	a.Config = flag.String("c", "", "path to json config")
 
 	flag.Parse()
@@ -180,6 +195,7 @@ func (a *AgentFile) loadConfigFromFile(pathEnv, pathFlag *string) error {
 		CryptoKey      *string `json:"crypto_key"`
 		Key            *string `json:"key"`
 		RateLimit      *int    `json:"rate_limit"`
+		TrustedSubnet  *string `json:"trusted_subnet"`
 	}
 
 	var im interm
@@ -202,6 +218,7 @@ func (a *AgentFile) loadConfigFromFile(pathEnv, pathFlag *string) error {
 	a.CryptoKey = im.CryptoKey
 	a.Key = im.Key
 	a.RateLimit = im.RateLimit
+	a.TrustedSubnet = im.TrustedSubnet
 
 	return nil
 }

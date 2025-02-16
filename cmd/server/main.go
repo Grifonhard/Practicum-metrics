@@ -5,6 +5,7 @@ package main
 import (
 	"fmt"
 	"log"
+	"net"
 	"os"
 	"os/signal"
 	"sync"
@@ -13,10 +14,13 @@ import (
 	"github.com/Grifonhard/Practicum-metrics/internal/cfg"
 	cryptoutils "github.com/Grifonhard/Practicum-metrics/internal/crypto_utils"
 	"github.com/Grifonhard/Practicum-metrics/internal/drivers/psql"
+	pb "github.com/Grifonhard/Practicum-metrics/internal/grpc"
+	"github.com/Grifonhard/Practicum-metrics/internal/grpc/server"
 	"github.com/Grifonhard/Practicum-metrics/internal/logger"
 	"github.com/Grifonhard/Practicum-metrics/internal/storage"
 	web "github.com/Grifonhard/Practicum-metrics/internal/web_server"
 	"github.com/gin-gonic/gin"
+	"google.golang.org/grpc"
 )
 
 var (
@@ -45,6 +49,15 @@ func main() {
 		logger.Info("private key successfully loaded")
 	}
 
+	var ipNet *net.IPNet
+	if *cfg.TrustedSubnet != "" {
+		_, ipNet, err = net.ParseCIDR(*cfg.TrustedSubnet)
+		if err != nil {
+			log.Fatalf("Ошибка парсинга trusted_subnet (%s): %v", *cfg.TrustedSubnet, err)
+		}
+		log.Printf("Загруженная доверенная подсеть: %s", *cfg.TrustedSubnet)
+	}
+
 	showMeta()
 
 	var dbInter psql.StorDB
@@ -70,29 +83,33 @@ func main() {
 	signal.Notify(sig, syscall.SIGQUIT, syscall.SIGTERM, syscall.SIGINT)
 	var wg sync.WaitGroup
 
-	r := initRouter(&wg, stor, db, *cfg.Key)
-	
+	/*r := initRouter(&wg, stor, db, *cfg.Key, ipNet)
+
 	logger.Info(fmt.Sprintf("Server start %s\n", *cfg.Addr))
 
 	go func (){
 		log.Fatal(r.Run(*cfg.Addr))
+	}()*/
+
+	go func() {
+		initGRPC(&wg, ipNet, db, stor, *cfg.Addr)
 	}()
-	
+
 	<-sig
 	wg.Wait()
 	logger.Info("server shutdown")
 }
 
-func initRouter(wg *sync.WaitGroup, stor *storage.MemStorage, db *psql.DB, key string) *gin.Engine {
+func initRouter(wg *sync.WaitGroup, stor *storage.MemStorage, db *psql.DB, key string, ipNet *net.IPNet) *gin.Engine {
 	router := gin.Default()
 	router.LoadHTMLGlob("./templates/*")
 
-	router.POST("/update/", web.WGadd(wg), web.ReqRespLogger(""), web.DataExtraction(), web.RespEncode(), web.Update(wg, stor))
-	router.POST("/update/:type/:name/:value", web.WGadd(wg), web.ReqRespLogger(""), web.DataExtraction(), web.Update(wg, stor))
-	router.POST("/updates/", web.WGadd(wg), web.PseudoAuth(key), cryptoutils.DecryptBody(), web.ReqRespLogger(key), web.DataExtraction(), web.Updates(wg, stor))
-	router.GET("/value/:type/:name", web.ReqRespLogger(""), web.DataExtraction(), web.Get(stor))
-	router.POST("/value/", web.ReqRespLogger(""), web.RespEncode(), web.GetJSON(stor))
-	router.GET("/", web.ReqRespLogger(""), web.RespEncode(), web.List(stor))
+	router.POST("/update/", web.WGadd(wg), web.ReqRespLogTScheck("", ipNet), web.DataExtraction(), web.RespEncode(), web.Update(wg, stor))
+	router.POST("/update/:type/:name/:value", web.WGadd(wg), web.ReqRespLogTScheck("", ipNet), web.DataExtraction(), web.Update(wg, stor))
+	router.POST("/updates/", web.WGadd(wg), web.PseudoAuth(key), cryptoutils.DecryptBody(), web.ReqRespLogTScheck(key, ipNet), web.DataExtraction(), web.Updates(wg, stor))
+	router.GET("/value/:type/:name", web.ReqRespLogTScheck("", ipNet), web.DataExtraction(), web.Get(stor))
+	router.POST("/value/", web.ReqRespLogTScheck("", ipNet), web.RespEncode(), web.GetJSON(stor))
+	router.GET("/", web.ReqRespLogTScheck("", ipNet), web.RespEncode(), web.List(stor))
 	if db != nil {
 		router.GET("/ping", web.PingDB(db))
 	}
@@ -104,4 +121,25 @@ func showMeta() {
 	fmt.Printf("Build version: %s\n", buildVersion)
 	fmt.Printf("Build commit: %s\n", buildCommit)
 	fmt.Printf("Build date: %s\n", buildDate)
+}
+
+func initGRPC(wg *sync.WaitGroup, TrS *net.IPNet, db *psql.DB, stor *storage.MemStorage, addr string) {
+	serv := server.New(wg, TrS, db, stor)
+
+	srv := grpc.NewServer(
+		grpc.ChainUnaryInterceptor(serv.UnaryInterceptor),
+		grpc.ChainStreamInterceptor(serv.StreamAuthInterceptor),
+	)
+
+	pb.RegisterMetricsServiceServer(srv, serv)
+
+	lis, err := net.Listen("tcp", addr)
+	if err != nil {
+		log.Fatalf("failed to listen: %v", err)
+	}
+
+	logger.Info("Starting gRPC server on :8080...")
+	if err := srv.Serve(lis); err != nil {
+		log.Fatalf("failed to serve: %v", err)
+	}
 }
