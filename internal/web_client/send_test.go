@@ -58,7 +58,7 @@ func TestPrepareDataToSend(t *testing.T) {
 	defer cancel()
 
 	// Вызов функции
-	prepareDataToSend(gaugeData, counterData, ch, cancel)
+	PrepareDataToSend(gaugeData, counterData, ch, cancel)
 
 	// Ожидаем завершения отправки метрик
 	<-ctx.Done()
