@@ -14,10 +14,13 @@ import (
 	"github.com/Grifonhard/Practicum-metrics/internal/cfg"
 	cryptoutils "github.com/Grifonhard/Practicum-metrics/internal/crypto_utils"
 	"github.com/Grifonhard/Practicum-metrics/internal/drivers/psql"
+	pb "github.com/Grifonhard/Practicum-metrics/internal/grpc"
+	"github.com/Grifonhard/Practicum-metrics/internal/grpc/server"
 	"github.com/Grifonhard/Practicum-metrics/internal/logger"
 	"github.com/Grifonhard/Practicum-metrics/internal/storage"
 	web "github.com/Grifonhard/Practicum-metrics/internal/web_server"
 	"github.com/gin-gonic/gin"
+	"google.golang.org/grpc"
 )
 
 var (
@@ -80,12 +83,16 @@ func main() {
 	signal.Notify(sig, syscall.SIGQUIT, syscall.SIGTERM, syscall.SIGINT)
 	var wg sync.WaitGroup
 
-	r := initRouter(&wg, stor, db, *cfg.Key, ipNet)
+	/*r := initRouter(&wg, stor, db, *cfg.Key, ipNet)
 	
 	logger.Info(fmt.Sprintf("Server start %s\n", *cfg.Addr))
 
 	go func (){
 		log.Fatal(r.Run(*cfg.Addr))
+	}()*/
+
+	go func(){
+		initGRPC(&wg, ipNet, db, stor, *cfg.Addr)
 	}()
 	
 	<-sig
@@ -114,4 +121,25 @@ func showMeta() {
 	fmt.Printf("Build version: %s\n", buildVersion)
 	fmt.Printf("Build commit: %s\n", buildCommit)
 	fmt.Printf("Build date: %s\n", buildDate)
+}
+
+func initGRPC(wg *sync.WaitGroup, TrS *net.IPNet, db *psql.DB, stor *storage.MemStorage, addr string) {
+	serv := server.New(wg, TrS, db, stor)
+
+    srv := grpc.NewServer(
+        grpc.ChainUnaryInterceptor(serv.UnaryInterceptor),
+        grpc.ChainStreamInterceptor(serv.StreamAuthInterceptor),
+    )
+	
+    pb.RegisterMetricsServiceServer(srv, serv)
+
+    lis, err := net.Listen("tcp", addr)
+    if err != nil {
+        log.Fatalf("failed to listen: %v", err)
+    }
+
+    logger.Info("Starting gRPC server on :8080...")
+    if err := srv.Serve(lis); err != nil {
+        log.Fatalf("failed to serve: %v", err)
+    }
 }
